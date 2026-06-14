@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bảng điều khiển — Tri Thức Số</title>
+  <meta name="description" content="Không gian học tập cá nhân hóa: hồ sơ, đánh giá năng lực, Learning DNA, lộ trình và tiến độ." />
+  <link rel="stylesheet" href="/css/fonts.css" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%2334d399' d='M12 2 2 7l10 5 10-5z'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <!-- ============ AUTH SCREEN ============ -->
+  <section id="authScreen" class="auth-screen">
+    <aside class="auth-aside">
+      <a class="brand" href="/" style="margin-bottom:40px;color:inherit">
+        <span class="mark">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span>Tri Thức Số<small>AI Learning Mentor</small></span>
+      </a>
+      <h2>Biến mục tiêu học tập thành lộ trình rõ ràng từng ngày.</h2>
+      <p class="lead">Đánh giá năng lực, xây Learning DNA, sinh lộ trình cá nhân hóa và dự đoán khả năng đạt mục tiêu bằng trí tuệ nhân tạo.</p>
+      <div class="auth-feats">
+        <div class="auth-feat">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+          <div><b>Đánh giá năng lực đầu vào</b><span>Xác định trình độ, điểm mạnh và điểm yếu của bạn.</span></div>
+        </div>
+        <div class="auth-feat">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20" /><circle cx="12" cy="12" r="9"/></svg></span>
+          <div><b>Lộ trình cá nhân hóa</b><span>Kế hoạch theo tháng, tuần và ngày phù hợp với bạn.</span></div>
+        </div>
+        <div class="auth-feat">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>
+          <div><b>Academic Twin dự đoán</b><span>Mô phỏng khả năng đạt mục tiêu theo thời lượng học.</span></div>
+        </div>
+      </div>
+    </aside>
+    <div class="auth-main">
+      <div class="auth-box reveal">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-mode="login" type="button">Đăng nhập</button>
+          <button class="auth-tab" data-mode="register" type="button">Đăng ký</button>
+        </div>
+        <form id="authForm">
+          <div class="field">
+            <label for="authEmail">Email</label>
+            <input class="input" type="email" id="authEmail" placeholder="ban@trithucso.vn" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="authPassword">Mật khẩu</label>
+            <input class="input" type="password" id="authPassword" placeholder="Tối thiểu 8 ký tự" autocomplete="current-password" required />
+            <span class="help" id="pwHelp">Mật khẩu cần tối thiểu 8 ký tự.</span>
+          </div>
+          <button class="btn btn-primary btn-block" id="authSubmit" type="submit">Đăng nhập</button>
+        </form>
+        <p class="faint" id="authSwitchHint" style="font-size:13px;margin-top:14px;text-align:center">Chưa có tài khoản? Chuyển sang Đăng ký.</p>
+        <p class="faint" style="font-size:13px;margin-top:18px;text-align:center">
+          Bản demo dùng cơ sở dữ liệu trong bộ nhớ. Dữ liệu sẽ đặt lại khi khởi động lại máy chủ.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ APP SHELL ============ -->
+  <div id="appShell" class="hidden">
+    <nav class="nav">
+      <div class="wrap">
+        <a class="brand" href="/" style="color:inherit">
+          <span class="mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7l10 5 10-5z"/></svg></span>
+          <span>Tri Thức Số<small>AI Learning Mentor</small></span>
+        </a>
+        <div class="nav-spacer"></div>
+        <div class="nav-user">
+          <div class="who"><b id="navName">Sinh viên</b><span id="navEmail" class="faint" style="font-size:12px"></span></div>
+          <button class="btn btn-ghost btn-sm" id="logoutBtn" type="button">Đăng xuất</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="wrap">
+      <div class="app">
+        <aside class="side">
+          <div class="nav-links" id="navLinks"></div>
+        </aside>
+        <main class="main">
+          <header class="view-head"><h1 id="viewTitle"></h1></header>
+          <section class="view" id="view"></section>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

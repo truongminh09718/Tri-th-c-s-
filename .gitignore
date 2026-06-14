@@ -1,0 +1,16 @@
+# Build artifacts (.NET)
+bin/
+obj/
+*.user
+.vs/
+
+# Logs
+*.log
+
+# Tooling caches
+.dotnet/
+.nuget/
+
+# OS
+Thumbs.db
+.DS_Store

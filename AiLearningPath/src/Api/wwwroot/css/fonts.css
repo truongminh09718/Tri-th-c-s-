@@ -1,0 +1,9 @@
+/* Typography stack — Outfit (body/UI) + Sora (display).
+   Tải tách khỏi CSS chính để không chặn render trang.
+   Có fallback hệ thống để giao diện vẫn ổn khi mạng chậm. */
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sora:wght@500;600;700;800&display=swap");
+
+:root {
+  --font-body: "Outfit", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Sora", "Outfit", "Segoe UI", system-ui, sans-serif;
+}

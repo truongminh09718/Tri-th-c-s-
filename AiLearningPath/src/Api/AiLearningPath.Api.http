@@ -1,0 +1,6 @@
+@AiLearningPath.Api_HostAddress = http://localhost:5125
+
+GET {{AiLearningPath.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
