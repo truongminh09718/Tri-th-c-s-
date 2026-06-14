@@ -128,6 +128,11 @@ function initAuth() {
     tab.classList.add("active");
     mode = tab.dataset.mode;
     $("#authSubmit").textContent = mode === "login" ? "Đăng nhập" : "Tạo tài khoản";
+    const title = $("#authTitle"), sub = $("#authSub");
+    if (title) title.textContent = mode === "login" ? "Chào bạn trở lại." : "Bắt đầu hành trình.";
+    if (sub) sub.textContent = mode === "login"
+      ? "Đăng nhập để tiếp tục lộ trình học của bạn."
+      : "Tạo tài khoản để nhận lộ trình cá nhân hóa.";
     $("#authSwitchHint").textContent = mode === "login"
       ? "Chưa có tài khoản? Chuyển sang Đăng ký."
       : "Đã có tài khoản? Chuyển sang Đăng nhập.";
