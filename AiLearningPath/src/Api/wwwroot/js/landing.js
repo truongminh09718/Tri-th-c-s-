@@ -32,7 +32,22 @@ if (lnav) {
   ).observe(sentinel);
 }
 
-// ---------- count-up (IntersectionObserver, rAF, reduced-motion safe) ----------
+// ---------- hamburger nav toggle (mobile <768px) ----------
+const navToggle = document.getElementById("lnavToggle");
+const navLinks = document.getElementById("lnavLinks");
+if (navToggle && lnav && navLinks) {
+  const setOpen = (open) => {
+    lnav.classList.toggle("nav-open", open);
+    navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    navToggle.setAttribute("aria-label", open ? "Đóng menu" : "Mở menu");
+  };
+  navToggle.addEventListener("click", () => setOpen(!lnav.classList.contains("nav-open")));
+  // close after picking a link, and on Escape
+  navLinks.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => setOpen(false)));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+}
+
+
 function countUp(elm) {
   const target = parseFloat(elm.dataset.count);
   const div = parseFloat(elm.dataset.div || "1");

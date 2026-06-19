@@ -1,0 +1,186 @@
+namespace AiLearningPath.Application.Assessments;
+
+/// <summary>
+/// Phần dữ liệu ngân hàng câu hỏi cho các chứng chỉ tiếng Anh: TOEIC và IELTS.
+/// </summary>
+public static partial class AssessmentQuestionBank
+{
+    private static readonly IReadOnlyList<AssessmentQuestionTemplate> Toeic = new[]
+    {
+        // Grammar
+        Q("Grammar",
+            "The new manager, _____ with the quarterly results, decided to expand the team.",
+            "please", "pleased", "pleasing", "pleasure", "pleased"),
+        Q("Grammar",
+            "All employees must submit their reports _____ Friday afternoon.",
+            "by", "until", "since", "during", "by"),
+        Q("Grammar",
+            "If the shipment _____ on time, we will meet the deadline.",
+            "arrives", "arrived", "will arrive", "arriving", "arrives"),
+        // Vocabulary
+        Q("Vocabulary",
+            "The company offers a competitive _____ package including health insurance.",
+            "benefit", "benefits", "beneficial", "benefiting", "benefits"),
+        Q("Vocabulary",
+            "Please _____ the attached document before the meeting.",
+            "review", "preview", "viewing", "overview", "review"),
+        Q("Vocabulary",
+            "Sales figures showed a significant _____ in the last quarter.",
+            "increase", "increasing", "increased", "increasingly", "increase"),
+        // Reading
+        Q("Reading",
+            "A notice reads: 'Office closed for maintenance on May 3.' What happens on May 3?",
+            "A sale starts", "The office is closed", "A new manager arrives", "Salaries are paid",
+            "The office is closed"),
+        Q("Reading",
+            "An email says 'Kindly confirm your attendance by replying to this message.' What should the reader do?",
+            "Ignore the email", "Reply to confirm", "Forward to a colleague", "Print the email",
+            "Reply to confirm"),
+        // Listening
+        Q("Listening",
+            "Speaker: 'The flight has been delayed by two hours.' What is the problem?",
+            "The flight is cancelled", "The flight is delayed", "The flight is early", "The gate changed",
+            "The flight is delayed"),
+        Q("Listening",
+            "Speaker: 'Could you send me the invoice by tomorrow?' What is being requested?",
+            "A meeting", "An invoice", "A refund", "A phone call",
+            "An invoice"),
+        // Grammar (mở rộng)
+        Q("Grammar",
+            "We need to _____ the meeting until next week because of the holiday.",
+            "postpone", "postponed", "postponing", "postpones", "postpone"),
+        Q("Grammar",
+            "The report _____ by the team before the deadline yesterday.",
+            "completes", "was completed", "is completing", "has complete", "was completed"),
+        Q("Grammar",
+            "Neither the manager _____ the assistants were available for comment.",
+            "or", "nor", "and", "but", "nor"),
+        // Vocabulary (mở rộng)
+        Q("Vocabulary",
+            "The factory aims to _____ production costs without lowering quality.",
+            "reduce", "reduction", "reducing", "reduced", "reduce"),
+        Q("Vocabulary",
+            "Our team will _____ the new software next month.",
+            "implement", "implementation", "implemented", "implementing", "implement"),
+        Q("Vocabulary",
+            "A 'deadline' is the time by which a task must be _____.",
+            "started", "finished", "cancelled", "ignored", "finished"),
+        // Reading (mở rộng)
+        Q("Reading",
+            "An ad says 'Buy one, get one free this weekend only.' The offer is valid _____.",
+            "every day", "only this weekend", "next month", "for members", "only this weekend"),
+        Q("Reading",
+            "A memo states 'Parking will be unavailable on Monday.' What is affected on Monday?",
+            "Salaries", "Parking", "The cafeteria", "The elevators", "Parking"),
+        // Listening (mở rộng)
+        Q("Listening",
+            "Speaker: 'Press one for sales, two for support.' To reach support, the caller presses _____.",
+            "one", "two", "three", "zero", "two"),
+        Q("Listening",
+            "Speaker: 'The meeting is moved to Room 305.' Where is the meeting now?",
+            "Room 503", "Room 305", "Room 350", "Room 035", "Room 305"),
+        // Grammar (mở rộng thêm)
+        Q("Grammar",
+            "She is responsible _____ managing the customer accounts.",
+            "of", "for", "to", "with", "for"),
+        Q("Grammar",
+            "If we _____ the budget, we could hire more staff.",
+            "increase", "increased", "will increase", "increases", "increased"),
+        // Vocabulary (mở rộng thêm)
+        Q("Vocabulary",
+            "Please find the document _____ to this email.",
+            "attach", "attached", "attaching", "attachment", "attached"),
+        Q("Vocabulary",
+            "The company plans to _____ its business into new markets.",
+            "expand", "expense", "expire", "expel", "expand"),
+    };
+
+    private static readonly IReadOnlyList<AssessmentQuestionTemplate> Ielts = new[]
+    {
+        // Grammar
+        Q("Grammar",
+            "Choose the correct form: 'By the time we arrived, the film _____.'",
+            "has started", "had started", "starts", "was start", "had started"),
+        Q("Grammar",
+            "Select the correct word: 'She has lived here _____ 2010.'",
+            "for", "since", "from", "during", "since"),
+        // Vocabulary
+        Q("Vocabulary",
+            "Which word best replaces 'crucial' in 'a crucial decision'?",
+            "minor", "vital", "casual", "optional", "vital"),
+        Q("Vocabulary",
+            "Choose the academic synonym for 'show' in 'the data show a trend'.",
+            "demonstrate", "guess", "hide", "ignore", "demonstrate"),
+        // Reading
+        Q("Reading",
+            "A passage states a claim then gives statistics to back it up. The statistics serve to _____.",
+            "contradict the claim", "support the claim", "change the topic", "summarise nothing",
+            "support the claim"),
+        Q("Reading",
+            "'Skimming' a text means reading to _____.",
+            "find specific details", "get the general idea quickly", "memorise every word",
+            "translate each sentence", "get the general idea quickly"),
+        // Listening
+        Q("Listening",
+            "In a lecture, the speaker says 'Let's move on to the second point.' This signals a _____.",
+            "conclusion", "transition", "repetition", "question", "transition"),
+        Q("Listening",
+            "A speaker says 'It costs fifteen pounds fifty.' What is the price?",
+            "£15.05", "£15.50", "£50.15", "£5.15", "£15.50"),
+        // Writing
+        Q("Writing",
+            "In Task 1 (Academic), you are mainly asked to _____.",
+            "give your opinion", "describe visual data", "tell a personal story",
+            "write a formal letter", "describe visual data"),
+        Q("Writing",
+            "A good essay introduction should include a _____.",
+            "conclusion", "thesis statement", "bibliography", "list of figures", "thesis statement"),
+        // Grammar (mở rộng)
+        Q("Grammar",
+            "Choose the correct article: 'She is _____ honest person.'",
+            "a", "an", "the", "no article", "an"),
+        Q("Grammar",
+            "Select the conditional: 'If it _____ tomorrow, we will cancel the trip.'",
+            "rains", "rained", "will rain", "would rain", "rains"),
+        Q("Grammar",
+            "Choose the comparative: 'This task is _____ than the previous one.'",
+            "difficult", "more difficult", "most difficult", "difficulter", "more difficult"),
+        // Vocabulary (mở rộng)
+        Q("Vocabulary",
+            "Which word is the closest synonym of 'significant'?",
+            "trivial", "important", "rare", "simple", "important"),
+        Q("Vocabulary",
+            "Choose the academic word for 'a lot of' research.",
+            "loads of", "a bunch of", "substantial", "tons of", "substantial"),
+        Q("Vocabulary",
+            "Which word best replaces 'consequently' as a linker?",
+            "however", "therefore", "meanwhile", "although", "therefore"),
+        // Reading (mở rộng)
+        Q("Reading",
+            "'Scanning' a text means reading to _____.",
+            "find specific information", "enjoy the style", "memorise everything",
+            "translate it", "find specific information"),
+        Q("Reading",
+            "A 'topic sentence' usually appears at the _____ of a paragraph.",
+            "beginning", "middle", "end", "footnote", "beginning"),
+        // Listening (mở rộng)
+        Q("Listening",
+            "A speaker says 'In summary, the results were positive.' This signals a _____.",
+            "new topic", "summary", "disagreement", "question", "summary"),
+        Q("Listening",
+            "A speaker says 'The deadline is the thirtieth of June.' The date is _____.",
+            "13 June", "30 June", "3 June", "30 July", "30 June"),
+        // Writing (mở rộng)
+        Q("Writing",
+            "In Task 2, an essay is mainly assessed on argument and _____.",
+            "handwriting", "coherence", "speed", "drawing", "coherence"),
+        Q("Writing",
+            "A formal essay should generally avoid _____.",
+            "linking words", "contractions like 'don't'", "topic sentences",
+            "a conclusion", "contractions like 'don't'"),
+        // Grammar (mở rộng thêm)
+        Q("Grammar",
+            "Choose the correct relative pronoun: 'The book _____ I read was useful.'",
+            "who", "which", "whose", "where", "which"),
+    };
+}

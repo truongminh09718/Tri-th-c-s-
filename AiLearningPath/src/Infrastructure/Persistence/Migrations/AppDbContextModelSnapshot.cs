@@ -22,6 +22,169 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.AdaptationEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AddedTasksJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FocusSkillsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("FromCache")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("LearningPathId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("UsedFallback")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LearningPathId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AdaptationEvents");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.AiCacheEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CacheKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CacheKey")
+                        .IsUnique();
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("AiCacheEntries");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.AiFeedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AiFeedback");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.AiInteractionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FallbackReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("LatencyMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AiInteractionLogs");
+                });
+
             modelBuilder.Entity("AiLearningPath.Domain.Entities.Assessment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -65,6 +228,10 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
 
                     b.Property<double>("Score")
                         .HasColumnType("float");
+
+                    b.Property<string>("SkillBreakdownJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("StrengthsJson")
                         .IsRequired()
@@ -311,6 +478,68 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
                     b.ToTable("ProgressSnapshots");
                 });
 
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.StudySchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("FromCache")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("UsedFallback")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("StudySchedules");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.StudyScheduleItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("EstimatedHours")
+                        .HasColumnType("float");
+
+                    b.Property<Guid?>("LearningTaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ScheduledFor")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Skill")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StudyScheduleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyScheduleId");
+
+                    b.ToTable("StudyScheduleItems");
+                });
+
             modelBuilder.Entity("AiLearningPath.Domain.Entities.StudySession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -331,6 +560,68 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("StudySessions");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.TutorConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TutorConversations");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.TutorMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TutorConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("UsedFallback")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TutorConversationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TutorMessages");
                 });
 
             modelBuilder.Entity("AiLearningPath.Domain.Entities.User", b =>
@@ -357,6 +648,36 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.AdaptationEvent", b =>
+                {
+                    b.HasOne("AiLearningPath.Domain.Entities.LearningPath", "LearningPath")
+                        .WithMany()
+                        .HasForeignKey("LearningPathId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AiLearningPath.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LearningPath");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.AiFeedback", b =>
+                {
+                    b.HasOne("AiLearningPath.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AiLearningPath.Domain.Entities.Assessment", b =>
@@ -466,6 +787,28 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.StudySchedule", b =>
+                {
+                    b.HasOne("AiLearningPath.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.StudyScheduleItem", b =>
+                {
+                    b.HasOne("AiLearningPath.Domain.Entities.StudySchedule", "Schedule")
+                        .WithMany("Items")
+                        .HasForeignKey("StudyScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
+                });
+
             modelBuilder.Entity("AiLearningPath.Domain.Entities.StudySession", b =>
                 {
                     b.HasOne("AiLearningPath.Domain.Entities.User", "User")
@@ -475,6 +818,28 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.TutorConversation", b =>
+                {
+                    b.HasOne("AiLearningPath.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.TutorMessage", b =>
+                {
+                    b.HasOne("AiLearningPath.Domain.Entities.TutorConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("TutorConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
                 });
 
             modelBuilder.Entity("AiLearningPath.Domain.Entities.Assessment", b =>
@@ -490,6 +855,16 @@ namespace AiLearningPath.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("AiLearningPath.Domain.Entities.PathPhase", b =>
                 {
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.StudySchedule", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("AiLearningPath.Domain.Entities.TutorConversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("AiLearningPath.Domain.Entities.User", b =>

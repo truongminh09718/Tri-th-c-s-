@@ -1,0 +1,9 @@
+{
+  "name": "ailearningpath-frontend-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node-based tests for Tri Thuc So frontend JS modules (Theme_Manager, R15).",
+  "scripts": {
+    "test": "node --test"
+  }
+}

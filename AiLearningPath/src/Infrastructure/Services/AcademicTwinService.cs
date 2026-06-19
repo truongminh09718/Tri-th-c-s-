@@ -61,11 +61,7 @@ public sealed class AcademicTwinService : IAcademicTwinService
         }
 
         // Dự đoán xác suất thô cho từng mức thời lượng (giữ chỉ số gốc để trả về đúng thứ tự đầu vào).
-        var raw = new double[hoursOptions.Count];
-        for (var i = 0; i < hoursOptions.Count; i++)
-        {
-            raw[i] = await PredictAsync(context, hoursOptions[i], cancellationToken);
-        }
+        var raw = await PredictRangeRawAsync(context, hoursOptions, cancellationToken);
 
         // R9.2 / Property 18: đảm bảo xác suất đơn điệu không giảm theo thời lượng học.
         // Sắp xếp theo thời lượng tăng dần, lấy running max rồi ánh xạ trở lại vị trí gốc.
@@ -166,6 +162,35 @@ public sealed class AcademicTwinService : IAcademicTwinService
             requestFeatures, cancellationToken);
 
         return Math.Clamp(probability, 0d, 1d);
+    }
+
+    private async Task<double[]> PredictRangeRawAsync(
+        PredictionContext context,
+        IReadOnlyList<double> hoursOptions,
+        CancellationToken cancellationToken)
+    {
+        var features = hoursOptions
+            .Select(h => new PredictionFeatures(
+                context.LearningGoal,
+                context.CurrentLevelScore,
+                h,
+                context.TargetDays,
+                new Dictionary<string, double>(context.Features)))
+            .ToList();
+
+        if (_predictionService is IBatchPredictionService batchPredictionService)
+        {
+            var probabilities = await batchPredictionService.PredictSuccessProbabilitiesAsync(features, cancellationToken);
+            return probabilities.Select(p => Math.Clamp(p, 0d, 1d)).ToArray();
+        }
+
+        var raw = new double[hoursOptions.Count];
+        for (var i = 0; i < hoursOptions.Count; i++)
+        {
+            raw[i] = await PredictAsync(context, hoursOptions[i], cancellationToken);
+        }
+
+        return raw;
     }
 
     /// <summary>

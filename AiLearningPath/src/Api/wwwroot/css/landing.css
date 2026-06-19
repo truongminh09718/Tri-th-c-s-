@@ -21,11 +21,46 @@
   --accent-ink: #84301a;
   --accent-wash: #ecddd4;
 
+  /* Surface tints pulled into variables so dark mode can recolor them.
+     nav backdrop + faint paper grain lines (light defaults). */
+  --nav-bg: rgba(239, 236, 228, 0.9);
+  --grain-line: rgba(24, 26, 31, 0.035);
+
   --r: 4px;
   --maxw: 1280px;
   --gutter: 32px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ============================================================
+   Dark theme (R15): override the same variable names with a dark
+   bone-ink palette. Never pure #000 / #fff. Accent brightened so it
+   keeps contrast on the dark canvas. Body pair contrast ~15:1 (AA+).
+   Activated by [data-theme="dark"] on the root element.
+   ============================================================ */
+[data-theme="dark"] {
+  /* Ink-blue canvas (not pure black) */
+  --paper: #12151c;
+  --paper-2: #1b2029;
+  --panel: #1b2029;
+  /* Light type (not pure white), body pair #e6e9ef on #12151c ~15:1 */
+  --ink: #e6e9ef;
+  --ink-soft: #b3b8c2;
+  --ink-faint: #8a909c;
+  --line: #2c333f;
+  --line-strong: #3a4250;
+
+  /* Brightened brick: #ce6247 on #12151c ~4.75:1 for accent text/links */
+  --accent: #ce6247;
+  --accent-ink: #dd7458;
+  --accent-wash: #2e211c;
+
+  --nav-bg: rgba(18, 21, 28, 0.9);
+  --grain-line: rgba(230, 233, 239, 0.05);
+}
+
+/* smooth color handoff when the theme flips */
+body { transition: background-color 0.3s var(--ease), color 0.3s var(--ease); }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -44,7 +79,7 @@ body::before {
   content: "";
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background-image:
-    repeating-linear-gradient(90deg, transparent, transparent calc((100vw - 0px) / 12 - 1px), rgba(24,26,31,0.035) calc((100vw - 0px) / 12 - 1px), rgba(24,26,31,0.035) calc((100vw - 0px) / 12));
+    repeating-linear-gradient(90deg, transparent, transparent calc((100vw - 0px) / 12 - 1px), var(--grain-line) calc((100vw - 0px) / 12 - 1px), var(--grain-line) calc((100vw - 0px) / 12));
   opacity: 0;
 }
 
@@ -83,7 +118,7 @@ h1, h2, h3 {
   border-bottom: 1.5px solid transparent;
   transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
 }
-.lnav.scrolled { background: rgba(239, 236, 228, 0.9); backdrop-filter: blur(8px); border-bottom-color: var(--ink); }
+.lnav.scrolled { background: var(--nav-bg); backdrop-filter: blur(8px); border-bottom-color: var(--ink); }
 .lnav .wrap { display: flex; align-items: center; gap: 18px; width: 100%; }
 .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 17px; font-family: var(--font-display); letter-spacing: -0.02em; }
 .brand .mark {
@@ -97,6 +132,35 @@ h1, h2, h3 {
 .lnav .links { display: flex; gap: 28px; align-items: center; }
 .lnav .links a { color: var(--ink-soft); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; transition: color 0.18s; }
 .lnav .links a:hover { color: var(--accent); }
+
+/* hamburger toggle: hidden on desktop, revealed at mobile breakpoint */
+.nav-toggle {
+  display: none; align-items: center; justify-content: center;
+  width: 42px; height: 42px; margin-left: 4px;
+  border: 1.5px solid var(--ink); border-radius: var(--r);
+  background: transparent; color: var(--ink); cursor: pointer;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+.nav-toggle:hover { background: var(--ink); color: var(--paper); }
+.nav-toggle svg { width: 22px; height: 22px; display: block; }
+.nav-toggle .ic-close { display: none; }
+.lnav.nav-open .nav-toggle .ic-open { display: none; }
+.lnav.nav-open .nav-toggle .ic-close { display: block; }
+
+/* theme toggle (R15.2): square icon button, sun in light, moon in dark */
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; margin-left: 4px;
+  border: 1.5px solid var(--ink); border-radius: var(--r);
+  background: transparent; color: var(--ink); cursor: pointer;
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+.theme-toggle:hover { background: var(--ink); color: var(--paper); }
+.theme-toggle:active { transform: translateY(1px); }
+.theme-toggle svg { width: 20px; height: 20px; display: block; }
+.theme-toggle .ic-moon { display: none; }
+[data-theme="dark"] .theme-toggle .ic-sun { display: none; }
+[data-theme="dark"] .theme-toggle .ic-moon { display: block; }
 
 /* ---------- Hero (editorial, asymmetric, structural rules) ---------- */
 .hero { position: relative; padding: 150px 0 70px; border-bottom: 1.5px solid var(--ink); }
@@ -249,11 +313,95 @@ h1, h2, h3 {
   .story-step { grid-template-columns: 1fr; gap: 28px; min-height: auto; padding: 60px 0; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .cta-band .wrap { grid-template-columns: 1fr; gap: 30px; align-items: start; }
-  .lnav .links { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   .reveal-up, [data-stagger] > * { opacity: 1 !important; transform: none !important; }
+}
+
+/* ============================================================
+   Responsive breakpoints (R16): mobile <768 / tablet 768-1023 / desktop >=1024
+   Standard three-tier layout. Desktop (>=1024px) keeps the full layout above.
+   ============================================================ */
+
+/* ---------- Tablet: 768px - 1023px (adaptive two-column where it fits) ---------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root { --gutter: 24px; }
+
+  .hero { padding: 130px 0 60px; }
+  .hero h1 { font-size: clamp(44px, 9vw, 104px); }
+  .hero-foot { grid-template-columns: 1.3fr 1fr; gap: 28px; }
+
+  .section { padding: 80px 0; }
+  .section-head { margin-bottom: 44px; }
+
+  /* keep storytelling two-column on tablet, hide the thin progress rail */
+  .story-shell { grid-template-columns: 1fr; }
+  .story-progress { display: none; }
+  .story-step { gap: 36px; }
+
+  /* metrics: 4 -> 2 columns */
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+
+  .cta-band .wrap { grid-template-columns: 1.4fr 1fr; gap: 36px; }
+}
+
+/* ---------- Mobile: < 768px (single column, no horizontal scroll) ---------- */
+@media (max-width: 767px) {
+  :root { --gutter: 18px; }
+
+  /* guard against any horizontal overflow on small screens */
+  html, body { overflow-x: hidden; max-width: 100%; }
+
+  /* collapsed nav: links hidden by default, hamburger toggles a vertical dropdown */
+  .lnav { height: 60px; }
+  .nav-toggle { display: inline-flex; }
+  .lnav .links {
+    position: absolute; top: 100%; right: var(--gutter); left: var(--gutter);
+    flex-direction: column; align-items: stretch; gap: 0;
+    background: var(--panel); border: 1.5px solid var(--ink); border-radius: var(--r);
+    padding: 6px; margin-top: 8px; box-shadow: 0 16px 40px rgba(24, 26, 31, 0.18);
+    display: none;
+  }
+  .lnav.nav-open .links { display: flex; }
+  .lnav .links a {
+    padding: 13px 14px; font-size: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .lnav .links a:last-child { border-bottom: 0; }
+
+  /* hero: reduce padding + font so it fits the viewport */
+  .hero { padding: 96px 0 44px; }
+  .hero h1 { font-size: clamp(40px, 13vw, 64px); }
+  .hero .lead { font-size: 17px; }
+  .hero-grid { gap: 28px; }
+  .hero-foot { grid-template-columns: 1fr; gap: 22px; padding-top: 20px; }
+  .hero-cta { justify-content: flex-start; }
+  .hero-cta .btn { flex: 1 1 auto; }
+
+  .ledger-row { grid-template-columns: 44px 1fr auto; gap: 12px; padding: 14px 14px; }
+  .ledger-row .big { font-size: clamp(26px, 8vw, 36px); }
+
+  /* sections + heads stack */
+  .section { padding: 64px 0; }
+  .section-head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 36px; }
+
+  /* storytelling: single column, no sticky stack, progress hidden */
+  .story-shell { grid-template-columns: 1fr; gap: 0; }
+  .story-progress { display: none; }
+  .story-step { grid-template-columns: 1fr; gap: 26px; min-height: auto; padding: 48px 0; }
+
+  /* capabilities pan cards: comfortable mobile width */
+  .pan-card { flex: 0 0 84vw; min-height: auto; padding: 26px; }
+
+  /* metrics: 4 -> 1 column */
+  .metrics { grid-template-columns: 1fr; }
+  .metric-c { padding: 30px 20px; }
+
+  /* CTA + footer stack */
+  .cta-band { padding: 88px 0; }
+  .cta-band .wrap { grid-template-columns: 1fr; gap: 26px; align-items: start; }
+  .foot .wrap { flex-direction: column; align-items: flex-start; }
 }

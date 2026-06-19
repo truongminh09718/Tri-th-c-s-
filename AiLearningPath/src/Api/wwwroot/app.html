@@ -5,8 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bảng điều khiển: Tri Thức Số</title>
   <meta name="description" content="Không gian học tập cá nhân hóa: hồ sơ, đánh giá năng lực, Learning DNA, lộ trình và tiến độ." />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("tts_theme");
+        if (t !== "light" && t !== "dark") {
+          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="/css/fonts.css" />
-  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/app.css?v=20260619-5" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23a8442b'/%3E%3Cg stroke='%23efece4' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 7h14'/%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M5 17h14'/%3E%3C/g%3E%3C/svg%3E" />
 </head>
 <body>
@@ -55,7 +68,10 @@
           </div>
           <button class="btn btn-primary btn-block" id="authSubmit" type="submit">Đăng nhập</button>
         </form>
-        <p class="faint" id="authSwitchHint" style="font-size:13px;margin-top:14px;text-align:center">Chưa có tài khoản? Chuyển sang Đăng ký.</p>
+        <p class="faint" id="authSwitchHint" style="font-size:13px;margin-top:14px;text-align:center">
+          Chưa có tài khoản?
+          <button type="button" class="auth-switch-link">Chuyển sang Đăng ký</button>
+        </p>
         <p class="faint" style="font-size:13px;margin-top:18px;text-align:center">
           Bản demo dùng cơ sở dữ liệu trong bộ nhớ. Dữ liệu sẽ đặt lại khi khởi động lại máy chủ.
         </p>
@@ -67,11 +83,21 @@
   <div id="appShell" class="hidden">
     <nav class="nav">
       <div class="wrap">
+        <button class="nav-toggle" id="sideToggle" type="button" aria-label="Mở menu" aria-expanded="false" aria-controls="navLinks">
+          <span aria-hidden="true">
+            <svg class="ic-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l16 0"/><path d="M4 12l16 0"/><path d="M4 18l16 0"/></svg>
+            <svg class="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"/><path d="M18 6l-12 12"/></svg>
+          </span>
+        </button>
         <a class="brand" href="/" style="color:inherit">
           <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l16 0"/><path d="M4 12l16 0"/><path d="M4 18l16 0"/></svg></span>
           <span>Tri Thức Số<small>SỔ TAY LỘ TRÌNH</small></span>
         </a>
         <div class="nav-spacer"></div>
+        <button class="theme-toggle" type="button" aria-label="Chuyển giao diện">
+          <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.93 19.07l1.41-1.41"/><path d="M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1-9-9z"/></svg>
+        </button>
         <div class="nav-user">
           <div class="who"><b id="navName">Sinh viên</b><span id="navEmail" class="faint" style="font-size:12px"></span></div>
           <button class="btn btn-ghost btn-sm" id="logoutBtn" type="button">Đăng xuất</button>
@@ -94,6 +120,14 @@
 
   <div class="toasts" id="toasts"></div>
 
-  <script src="/js/app.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/app.js?v=20260619-5"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      if (window.ThemeManager) {
+        window.ThemeManager.init();
+      }
+    });
+  </script>
 </body>
 </html>

@@ -269,6 +269,124 @@ Quy ước PBT: mỗi property test chạy tối thiểu 100 iteration và gắn
 - [x] 16. Checkpoint cuối — Toàn bộ test pass
   - Ensure all tests pass, ask the user if questions arise.
 
+- [x] 17. Tích hợp Gemini API thật cho Content_Generator (R17)
+  - [x] 17.1 Bổ sung cấu hình timeout và helper IsConfigured vào GeminiOptions
+    - Thêm thuộc tính `TimeoutSeconds` (mặc định 30) vào `GeminiOptions` (tương thích ngược)
+    - Thêm hàm `IsConfigured(GeminiOptions)` trả `true` khi có cả `ApiKey` và `Endpoint`
+    - _Requirements: 17.1, 17.2, 17.4_
+
+  - [x] 17.2 Hiện thực GeminiContentGenerator : IContentGenerator
+    - Tạo adapter lớp Infrastructure dùng `HttpClient` (tạo qua `IHttpClientFactory`)
+    - Build prompt theo `Kind` (Assessment / LearningPath / CareerPath) + `LearningGoal`, gọi endpoint `generateContent`
+    - Áp timeout cấu hình bằng `CancellationTokenSource` liên kết với `ct`; `EnsureSuccess` ném lỗi khi HTTP lỗi
+    - Parse và chuẩn hóa response về **cùng** cấu trúc payload mà `PlaceholderContentGenerator` trả ra (JSON `GeneratedAssessmentContent` / `GeneratedCareerContent`, plain text cho LearningPath)
+    - _Requirements: 17.1, 17.4, 17.5_
+
+  - [x] 17.3 Hiện thực ResilientContentGenerator (decorator dự phòng)
+    - Tạo decorator nhận `GeminiContentGenerator` (primary) và `PlaceholderContentGenerator` (fallback)
+    - Thử Gemini trước; bắt `HttpError`/`Timeout`/`ParseError` → log cảnh báo và trả về kết quả placeholder cho cùng yêu cầu (không ném lỗi ra ngoài)
+    - _Requirements: 17.2, 17.3, 17.4, 17.5_
+
+  - [x]* 17.4 Viết property test cho dự phòng an toàn của Content_Generator
+    - **Property 24: Dự phòng an toàn của Content_Generator khi dịch vụ ngoài lỗi**
+    - Mock adapter Gemini ném `HttpRequestException`/`OperationCanceledException`; xác nhận decorator trả về output placeholder cùng schema
+    - **Validates: Requirements 17.2, 17.3, 17.4, 17.5**
+
+  - [x] 17.5 Đăng ký DI cho Content_Generator theo GeminiOptions (Program.cs)
+    - Luôn đăng ký `PlaceholderContentGenerator` làm fallback
+    - Nếu `IsConfigured(GeminiOptions)` → đăng ký `HttpClient` cho `GeminiContentGenerator` và bind `IContentGenerator` → `ResilientContentGenerator(Gemini, Placeholder)`
+    - Ngược lại → bind `IContentGenerator` → `PlaceholderContentGenerator`
+    - _Requirements: 17.1, 17.2_
+
+- [x] 18. Tích hợp ML Prediction Service thật cho Academic Twin (R18)
+  - [x] 18.1 Bổ sung cấu hình timeout và helper IsConfigured vào MlServiceOptions
+    - Thêm thuộc tính `TimeoutSeconds` (mặc định 10) vào `MlServiceOptions` (tương thích ngược)
+    - Thêm hàm `IsConfigured(MlServiceOptions)` trả `true` khi có `Endpoint`
+    - _Requirements: 18.1, 18.2, 18.4_
+
+  - [x] 18.2 Hiện thực MlPredictionService : IPredictionService
+    - Tạo adapter dùng `HttpClient` (qua `IHttpClientFactory`)
+    - Map `PredictionFeatures` → JSON `{currentLevelScore, hoursPerDay, goalType, targetDays}`, POST tới `{Endpoint}/predict`
+    - Áp timeout cấu hình; `EnsureSuccess` ném lỗi khi HTTP lỗi; đọc `{"probability": x}` và kẹp giá trị về `[0, 1]`
+    - _Requirements: 18.1, 18.4, 18.5_
+
+  - [x] 18.3 Hiện thực ResilientPredictionService (decorator dự phòng)
+    - Tạo decorator nhận `MlPredictionService` (primary) và `PlaceholderPredictionService` (fallback)
+    - Thử ML thật trước; bắt `HttpError`/`Timeout`/`ParseError` → log cảnh báo và trả về xác suất placeholder (không ném lỗi ra ngoài)
+    - _Requirements: 18.2, 18.3, 18.4, 18.5_
+
+  - [x] 18.4 Tạo microservice Python (FastAPI + Scikit-learn) trong `ml-service/`
+    - Tạo dịch vụ FastAPI với `LogisticRegression`; huấn luyện trên dữ liệu **tổng hợp deterministic** (seed cố định, ví dụ `numpy.random.default_rng(42)`), nhãn đảm bảo hệ số `hoursPerDay` dương → xác suất đơn điệu không giảm theo `hoursPerDay`
+    - Endpoint `POST /predict` (nhận `currentLevelScore`, `hoursPerDay`, `goalType`, `targetDays`; trả `{"probability": x}` với `x ∈ [0,1]`) và `GET /health` (`{"status":"ok"}`)
+    - Huấn luyện một lần khi khởi động (hoặc tải artifact `.pkl`); chuẩn hóa đặc trưng trước khi đưa vào mô hình
+    - Kèm `requirements.txt` (fastapi, uvicorn, scikit-learn, numpy) và `README` hướng dẫn chạy
+    - _Requirements: 18.1, 18.5_
+
+  - [x]* 18.5 Viết property test cho dự đoán đơn điệu theo thời lượng học
+    - **Property 23: Dự đoán đơn điệu không giảm theo thời lượng học**
+    - Mock `MlPredictionService` (hoặc reference model đơn điệu); FsCheck sinh cặp `h1 ≤ h2`, kiểm `p(h1) ≤ p(h2)` và mọi xác suất ∈ `[0,1]`
+    - **Validates: Requirements 18.5**
+
+  - [x]* 18.6 Viết property test cho dự phòng an toàn của Prediction_Service
+    - **Property 25: Dự phòng an toàn của Prediction_Service khi dịch vụ ngoài lỗi**
+    - Mock ML adapter ném lỗi/timeout; xác nhận `ResilientPredictionService` trả về xác suất placeholder ∈ `[0,1]` (không ném lỗi)
+    - **Validates: Requirements 18.2, 18.3, 18.4, 18.5**
+
+  - [x] 18.7 Đăng ký DI cho Prediction_Service theo MlServiceOptions (Program.cs)
+    - Luôn đăng ký `PlaceholderPredictionService` làm fallback
+    - Nếu `IsConfigured(MlServiceOptions)` → đăng ký `HttpClient` cho `MlPredictionService` và bind `IPredictionService` → `ResilientPredictionService(Ml, Placeholder)`
+    - Ngược lại → bind `IPredictionService` → `PlaceholderPredictionService`
+    - _Requirements: 18.1, 18.2_
+
+- [x] 19. Hiện thực Dark Mode — Theme_Manager (R15, frontend thuần)
+  - [x] 19.1 Tạo module js/theme.js (Theme_Manager)
+    - Hiện thực `Theme_Manager` (vanilla JS, không phụ thuộc framework) với: `getCurrent`, `resolveInitial` (ưu tiên `localStorage['tts_theme']`, fallback `prefers-color-scheme`), `apply` (đặt `data-theme` trên `<html>`), `toggle`, `persist`, `opposite`, `bindToggle`, `init`
+    - _Requirements: 15.1, 15.2, 15.3, 15.4_
+
+  - [x] 19.2 Thêm inline anti-FOUC script trong `<head>` của index.html và app.html
+    - Script đồng bộ chạy trước render body: đọc `tts_theme` (hợp lệ → dùng), nếu không có thì theo `prefers-color-scheme`, đặt `data-theme` ngay lập tức
+    - Nạp `js/theme.js` ở cả landing và app
+    - _Requirements: 15.1, 15.4_
+
+  - [x] 19.3 Refactor css/landing.css và css/app.css sang CSS custom properties
+    - Khai báo biến màu ở `:root` (light) và override ở `[data-theme="dark"]`; toàn bộ màu tham chiếu biến, không hardcode
+    - Tránh `#000000`/`#FFFFFF` thuần cho nền/chữ vùng body; chọn cặp `--color-bg`/`--color-text` đạt tương phản ≥ 4.5:1 (WCAG AA) ở cả hai theme
+    - _Requirements: 15.5, 15.6_
+
+  - [x] 19.4 Thêm nút toggle .theme-toggle vào nav của landing và app
+    - Thêm nút `.theme-toggle` (kèm `aria-label` phản ánh trạng thái) vào thanh điều hướng `index.html` và `app.html`; gọi `Theme_Manager.init()` để gắn sự kiện
+    - _Requirements: 15.2, 15.3_
+
+  - [x]* 19.5 Viết property test cho tương phản màu body đạt WCAG AA
+    - **Property 21: Tương phản màu body đạt WCAG AA ở cả hai Theme**
+    - Trích bảng màu theme thành dữ liệu thuần; hàm thuần tính tỷ lệ tương phản (relative luminance) → kiểm cả light/dark ≥ 4.5:1 và khác `#000`/`#fff` thuần; chạy bằng runner JS (Node)
+    - **Validates: Requirements 15.5, 15.6**
+
+  - [x]* 19.6 Viết property test cho giải quyết và chuyển đổi Theme có tính xác định
+    - **Property 22: Giải quyết và chuyển đổi Theme có tính xác định**
+    - Kiểm `resolveInitial` trên toàn tổ hợp `{tts_theme} × {prefers-color-scheme}` và tính đối xứng `opposite(opposite(t)) = t`; chạy bằng runner JS (Node)
+    - **Validates: Requirements 15.1, 15.2, 15.4**
+
+- [x] 20. Hiện thực Responsive & Mobile Friendly (R16, CSS thuần)
+  - [x] 20.1 Thêm media queries ba breakpoint vào landing.css và app.css
+    - Mobile `<768px`: bố cục một cột xếp dọc, `overflow-x: hidden`, không cuộn ngang
+    - Tablet `768–1023px`: bố cục thích ứng (2 cột linh hoạt)
+    - Desktop `≥1024px`: bố cục đầy đủ (sidebar + nội dung)
+    - _Requirements: 16.1, 16.2, 16.3_
+
+  - [x] 20.2 Hiện thực điều hướng thu gọn (hamburger) cho landing nav và app sidebar
+    - Thêm nút hamburger hiển thị ở mobile; vanilla JS toggle class `.nav-open` và cập nhật `aria-expanded`; điều khiển hiển thị bằng CSS
+    - _Requirements: 16.4_
+
+  - [x] 20.3 Xác nhận viewport và thích ứng form/dashboard/view AI + Chart.js
+    - Kiểm tra/xác nhận thẻ `<meta name="viewport" content="width=device-width, initial-scale=1" />` trong `index.html` và `app.html`
+    - Form, dashboard (thẻ chỉ số), view AI (assessment/path/twin/career) thích ứng theo breakpoint; cấu hình Chart.js `responsive: true, maintainAspectRatio: false` trong vùng chứa co giãn
+    - _Requirements: 16.5, 16.6_
+
+- [x] 21. Checkpoint cuối — Tích hợp AI/ML thật & giao diện (R15–R18)
+  - Ensure all tests pass, ask the user if questions arise.
+  - Đảm bảo build backend C# pass, các property/unit test mới pass, microservice Python chạy được (`/health`, `/predict`), và frontend (dark mode + responsive) hoạt động trên cả landing và app.
+
 ## Notes
 
 - Các nhiệm vụ đánh dấu `*` là tùy chọn (unit/property/integration test) và có thể bỏ qua để dựng MVP nhanh, nhưng được khuyến nghị thực hiện để đảm bảo đúng đắn.
@@ -292,7 +410,12 @@ Quy ước PBT: mỗi property test chạy tối thiểu 100 iteration và gắn
     { "id": 8, "tasks": ["10.6", "11.5", "13.4", "13.5", "14.2"] },
     { "id": 9, "tasks": ["11.6", "11.7", "13.6"] },
     { "id": 10, "tasks": ["15.1"] },
-    { "id": 11, "tasks": ["15.2"] }
+    { "id": 11, "tasks": ["15.2"] },
+    { "id": 12, "tasks": ["17.1", "18.1", "18.4", "19.1", "20.1"] },
+    { "id": 13, "tasks": ["17.2", "18.2", "19.2", "19.3", "20.2"] },
+    { "id": 14, "tasks": ["17.3", "18.3", "19.4", "20.3"] },
+    { "id": 15, "tasks": ["17.4", "18.5", "18.6", "19.5", "19.6"] },
+    { "id": 16, "tasks": ["17.5", "18.7"] }
   ]
 }
 ```

@@ -134,7 +134,8 @@ public sealed record AssessmentResultResponse(
     string Level,
     double Score,
     IReadOnlyList<string> Strengths,
-    IReadOnlyList<string> Weaknesses)
+    IReadOnlyList<string> Weaknesses,
+    IReadOnlyList<SkillBreakdownItem> SkillBreakdown)
 {
     public static AssessmentResultResponse From(AssessmentResult result) => new(
         result.Id,
@@ -143,5 +144,7 @@ public sealed record AssessmentResultResponse(
         result.Level,
         result.Score,
         JsonFieldSerializer.Deserialize<List<string>>(result.StrengthsJson) ?? new List<string>(),
-        JsonFieldSerializer.Deserialize<List<string>>(result.WeaknessesJson) ?? new List<string>());
+        JsonFieldSerializer.Deserialize<List<string>>(result.WeaknessesJson) ?? new List<string>(),
+        JsonFieldSerializer.Deserialize<List<SkillBreakdownItem>>(result.SkillBreakdownJson)
+            ?? new List<SkillBreakdownItem>());
 }

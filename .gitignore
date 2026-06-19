@@ -11,6 +11,20 @@ obj/
 .dotnet/
 .nuget/
 
+# Local databases and runtime state
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Node
+node_modules/
+
 # OS
 Thumbs.db
 .DS_Store

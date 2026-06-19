@@ -21,6 +21,13 @@ public class AssessmentResult
     /// <summary>Danh sách điểm yếu serialize dạng JSON.</summary>
     public string WeaknessesJson { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Chi tiết điểm theo từng lĩnh vực kỹ năng (số câu đúng/tổng, độ chính xác) serialize
+    /// dạng JSON. Bảo đảm phần phân tích điểm mạnh/yếu luôn có dữ liệu để hiển thị, kể cả
+    /// khi không có lĩnh vực nào vượt ngưỡng mạnh hay dưới ngưỡng yếu.
+    /// </summary>
+    public string SkillBreakdownJson { get; set; } = string.Empty;
+
     public double Score { get; set; }
 
     // Quan hệ điều hướng

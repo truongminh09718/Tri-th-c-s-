@@ -132,6 +132,13 @@ public sealed class AssessmentEngine : IAssessmentEngine
         result.StrengthsJson = JsonFieldSerializer.Serialize(grading.Strengths);
         result.WeaknessesJson = JsonFieldSerializer.Serialize(grading.Weaknesses);
 
+        // Lưu chi tiết điểm theo từng lĩnh vực kỹ năng để phần phân tích điểm mạnh/yếu luôn
+        // có dữ liệu hiển thị, kể cả khi không lĩnh vực nào vượt/dưới ngưỡng phân loại.
+        var breakdown = grading.SkillBreakdown
+            .Select(s => new SkillBreakdownItem(s.SkillArea, s.CorrectCount, s.TotalCount, s.Accuracy))
+            .ToList();
+        result.SkillBreakdownJson = JsonFieldSerializer.Serialize(breakdown);
+
         assessment.Status = AssessmentStatus.Completed;
 
         await _db.SaveChangesAsync(cancellationToken);

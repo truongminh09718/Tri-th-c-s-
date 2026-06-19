@@ -1,32 +1,44 @@
 namespace AiLearningPath.Infrastructure.Services;
 
 /// <summary>
-/// Cấu hình dịch vụ sinh nội dung AI (Gemini), bind từ section <c>"Gemini"</c> của
-/// appsettings. Khi <see cref="ApiKey"/> và <see cref="Endpoint"/> chưa được cấu hình,
-/// hệ thống dùng triển khai placeholder xác định (<see cref="PlaceholderContentGenerator"/>)
-/// để ứng dụng vẫn chạy end-to-end mà không phụ thuộc mạng/khóa thật.
+/// Configuration for Gemini-backed content generation.
+/// Empty ApiKey/Endpoint means the real provider is not configured and the app should use deterministic fallback.
 /// </summary>
 public sealed class GeminiOptions
 {
     public const string SectionName = "Gemini";
 
-    /// <summary>Khóa API Gemini. Để trống nghĩa là chưa cấu hình dịch vụ thật.</summary>
     public string? ApiKey { get; set; }
 
-    /// <summary>Endpoint HTTP của dịch vụ sinh nội dung. Để trống nghĩa là chưa cấu hình.</summary>
     public string? Endpoint { get; set; }
+
+    public int TimeoutSeconds { get; set; } = 30;
+
+    public static bool IsConfigured(GeminiOptions o)
+        => o is not null
+           && !string.IsNullOrWhiteSpace(o.ApiKey)
+           && !string.IsNullOrWhiteSpace(o.Endpoint);
 }
 
 /// <summary>
-/// Cấu hình dịch vụ dự đoán ML (Python + Scikit-learn microservice), bind từ section
-/// <c>"MlService"</c> của appsettings. Khi <see cref="Endpoint"/> chưa được cấu hình,
-/// hệ thống dùng triển khai placeholder xác định
-/// (<see cref="PlaceholderPredictionService"/>) để ứng dụng vẫn chạy end-to-end.
+/// Configuration for the Python ML prediction service.
+/// Empty Endpoint means the real service is not configured and the app should use deterministic fallback.
 /// </summary>
 public sealed class MlServiceOptions
 {
     public const string SectionName = "MlService";
 
-    /// <summary>Endpoint HTTP của ML Service. Để trống nghĩa là chưa cấu hình dịch vụ thật.</summary>
     public string? Endpoint { get; set; }
+
+    /// <summary>
+    /// Optional internal key sent to the ML service as X-ML-Service-Key.
+    /// Leave empty in local development; require it in Production when Endpoint is configured.
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    public int TimeoutSeconds { get; set; } = 10;
+
+    public static bool IsConfigured(MlServiceOptions o)
+        => o is not null
+           && !string.IsNullOrWhiteSpace(o.Endpoint);
 }
