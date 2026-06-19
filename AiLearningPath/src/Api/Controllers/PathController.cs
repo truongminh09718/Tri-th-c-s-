@@ -1,8 +1,10 @@
 using AiLearningPath.Application.Paths;
+using AiLearningPath.Application.Adaptive;
 using AiLearningPath.Domain.Common;
 using AiLearningPath.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AiLearningPath.Api.Controllers;
 
@@ -19,10 +21,12 @@ namespace AiLearningPath.Api.Controllers;
 public sealed class PathController : ControllerBase
 {
     private readonly IPathGenerator _pathGenerator;
+    private readonly IAdaptiveLearningService _adaptiveLearningService;
 
-    public PathController(IPathGenerator pathGenerator)
+    public PathController(IPathGenerator pathGenerator, IAdaptiveLearningService adaptiveLearningService)
     {
         _pathGenerator = pathGenerator ?? throw new ArgumentNullException(nameof(pathGenerator));
+        _adaptiveLearningService = adaptiveLearningService ?? throw new ArgumentNullException(nameof(adaptiveLearningService));
     }
 
     /// <summary>
@@ -46,6 +50,19 @@ public sealed class PathController : ControllerBase
         var response = LearningPathResponse.From(path);
 
         return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    [HttpPost("{pathId:guid}/adapt")]
+    [EnableRateLimiting("ai")]
+    [ProducesResponseType(typeof(AdaptivePathResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Adapt(
+        Guid userId,
+        Guid pathId,
+        [FromBody] AdaptivePathRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _adaptiveLearningService.AdaptAsync(userId, pathId, request ?? new AdaptivePathRequest(), cancellationToken);
+        return Ok(response);
     }
 }
 

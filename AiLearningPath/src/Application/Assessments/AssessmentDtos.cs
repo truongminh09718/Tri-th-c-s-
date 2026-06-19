@@ -67,5 +67,20 @@ public sealed record GeneratedQuestion(
 /// </summary>
 public static class AssessmentDefaults
 {
-    public const int QuestionCount = 10;
+    public const int QuestionCount = 20;
 }
+
+/// <summary>
+/// Chi tiết điểm của một lĩnh vực kỹ năng như được lưu trong <c>SkillBreakdownJson</c>
+/// và trả về cho client. Cho phép hiển thị đầy đủ điểm theo từng lĩnh vực, kể cả lĩnh vực
+/// không được phân loại là điểm mạnh hay điểm yếu.
+/// </summary>
+/// <param name="SkillArea">Tên lĩnh vực kỹ năng.</param>
+/// <param name="CorrectCount">Số câu trả lời đúng trong lĩnh vực này.</param>
+/// <param name="TotalCount">Tổng số câu hỏi trong lĩnh vực này.</param>
+/// <param name="Accuracy">Tỷ lệ đúng trong khoảng [0, 1].</param>
+public sealed record SkillBreakdownItem(
+    string SkillArea,
+    int CorrectCount,
+    int TotalCount,
+    double Accuracy);

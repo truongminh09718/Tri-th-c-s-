@@ -31,3 +31,10 @@ public interface IPredictionService
         PredictionFeatures features,
         CancellationToken cancellationToken = default);
 }
+
+public interface IBatchPredictionService : IPredictionService
+{
+    Task<IReadOnlyList<double>> PredictSuccessProbabilitiesAsync(
+        IReadOnlyList<PredictionFeatures> features,
+        CancellationToken cancellationToken = default);
+}

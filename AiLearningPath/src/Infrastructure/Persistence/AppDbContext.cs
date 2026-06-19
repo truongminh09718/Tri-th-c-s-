@@ -25,10 +25,23 @@ public class AppDbContext : DbContext
     public DbSet<CareerPath> CareerPaths => Set<CareerPath>();
     public DbSet<StudySession> StudySessions => Set<StudySession>();
     public DbSet<ProgressSnapshot> ProgressSnapshots => Set<ProgressSnapshot>();
+    public DbSet<AiInteractionLog> AiInteractionLogs => Set<AiInteractionLog>();
+    public DbSet<AiCacheEntry> AiCacheEntries => Set<AiCacheEntry>();
+    public DbSet<AiFeedback> AiFeedback => Set<AiFeedback>();
+    public DbSet<TutorConversation> TutorConversations => Set<TutorConversation>();
+    public DbSet<TutorMessage> TutorMessages => Set<TutorMessage>();
+    public DbSet<StudySchedule> StudySchedules => Set<StudySchedule>();
+    public DbSet<StudyScheduleItem> StudyScheduleItems => Set<StudyScheduleItem>();
+    public DbSet<AdaptationEvent> AdaptationEvents => Set<AdaptationEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Kiểu cột cho các trường JSON lớn khác nhau giữa các nhà cung cấp: SQL Server dùng
+        // "nvarchar(max)", còn SQLite/InMemory dùng "TEXT". Chọn theo provider để EnsureCreated
+        // sinh đúng DDL (SQLite không hiểu "nvarchar(max)").
+        var largeText = Database.IsSqlServer() ? "nvarchar(max)" : "TEXT";
 
         // --- User: Email duy nhất (R1.1) ---
         modelBuilder.Entity<User>(entity =>
@@ -74,6 +87,21 @@ public class AppDbContext : DbContext
                 .WithOne(s => s.User)
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany<AiFeedback>()
+                .WithOne(f => f.User)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany<TutorConversation>()
+                .WithOne(c => c.User)
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany<StudySchedule>()
+                .WithOne(s => s.User)
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // --- Profile: mỗi UserId là duy nhất (1-1) ---
@@ -88,7 +116,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(a => a.Id);
             entity.HasIndex(a => a.UserId);
-            entity.Property(a => a.QuestionsJson).HasColumnType("nvarchar(max)");
+            entity.Property(a => a.QuestionsJson).HasColumnType(largeText);
 
             // Quan hệ 1-1 với AssessmentResult
             entity.HasOne(a => a.Result)
@@ -103,8 +131,9 @@ public class AppDbContext : DbContext
             entity.HasKey(r => r.Id);
             entity.HasIndex(r => r.UserId);
             entity.HasIndex(r => r.AssessmentId).IsUnique();
-            entity.Property(r => r.StrengthsJson).HasColumnType("nvarchar(max)");
-            entity.Property(r => r.WeaknessesJson).HasColumnType("nvarchar(max)");
+            entity.Property(r => r.StrengthsJson).HasColumnType(largeText);
+            entity.Property(r => r.WeaknessesJson).HasColumnType(largeText);
+            entity.Property(r => r.SkillBreakdownJson).HasColumnType(largeText);
 
             // UserId của AssessmentResult không cấu hình quan hệ điều hướng tới User
             // để tránh nhiều đường cascade; chỉ là cột sở hữu.
@@ -119,9 +148,9 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(d => d.Id);
             entity.HasIndex(d => d.UserId).IsUnique();
-            entity.Property(d => d.EffectiveHoursJson).HasColumnType("nvarchar(max)");
-            entity.Property(d => d.StrengthsJson).HasColumnType("nvarchar(max)");
-            entity.Property(d => d.WeaknessesJson).HasColumnType("nvarchar(max)");
+            entity.Property(d => d.EffectiveHoursJson).HasColumnType(largeText);
+            entity.Property(d => d.StrengthsJson).HasColumnType(largeText);
+            entity.Property(d => d.WeaknessesJson).HasColumnType(largeText);
         });
 
         // --- LearningPath → PathPhase → LearningTask ---
@@ -158,9 +187,9 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(c => c.Id);
             entity.HasIndex(c => c.UserId);
-            entity.Property(c => c.SkillsJson).HasColumnType("nvarchar(max)");
-            entity.Property(c => c.CertificationsJson).HasColumnType("nvarchar(max)");
-            entity.Property(c => c.ProjectsJson).HasColumnType("nvarchar(max)");
+            entity.Property(c => c.SkillsJson).HasColumnType(largeText);
+            entity.Property(c => c.CertificationsJson).HasColumnType(largeText);
+            entity.Property(c => c.ProjectsJson).HasColumnType(largeText);
         });
 
         // --- StudySession ---
@@ -175,6 +204,77 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(s => s.Id);
             entity.HasIndex(s => s.UserId);
+        });
+
+        modelBuilder.Entity<AiInteractionLog>(entity =>
+        {
+            entity.HasKey(l => l.Id);
+            entity.HasIndex(l => l.UserId);
+            entity.HasIndex(l => l.CorrelationId);
+            entity.Property(l => l.Operation).HasMaxLength(80);
+            entity.Property(l => l.Provider).HasMaxLength(80);
+            entity.Property(l => l.Status).HasMaxLength(80);
+        });
+
+        modelBuilder.Entity<AiCacheEntry>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.HasIndex(c => c.CacheKey).IsUnique();
+            entity.HasIndex(c => c.ExpiresAt);
+            entity.Property(c => c.Content).HasColumnType(largeText);
+        });
+
+        modelBuilder.Entity<AiFeedback>(entity =>
+        {
+            entity.HasKey(f => f.Id);
+            entity.HasIndex(f => f.UserId);
+            entity.Property(f => f.Comment).HasColumnType(largeText);
+        });
+
+        modelBuilder.Entity<TutorConversation>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.HasIndex(c => c.UserId);
+            entity.HasMany(c => c.Messages)
+                .WithOne(m => m.Conversation)
+                .HasForeignKey(m => m.TutorConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TutorMessage>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.HasIndex(m => m.UserId);
+            entity.Property(m => m.Content).HasColumnType(largeText);
+        });
+
+        modelBuilder.Entity<StudySchedule>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.HasIndex(s => s.UserId);
+            entity.HasMany(s => s.Items)
+                .WithOne(i => i.Schedule)
+                .HasForeignKey(i => i.StudyScheduleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudyScheduleItem>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+            entity.HasIndex(i => i.StudyScheduleId);
+        });
+
+        modelBuilder.Entity<AdaptationEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.LearningPathId);
+            entity.Property(e => e.AddedTasksJson).HasColumnType(largeText);
+            entity.Property(e => e.FocusSkillsJson).HasColumnType(largeText);
+            entity.HasOne(e => e.LearningPath)
+                .WithMany()
+                .HasForeignKey(e => e.LearningPathId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

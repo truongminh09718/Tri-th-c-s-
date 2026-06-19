@@ -25,6 +25,18 @@ Tài liệu này mô tả các yêu cầu cho phạm vi MVP (Minimum Viable Prod
 - **Learning_Goal**: Mục tiêu học tập do sinh viên chọn (ví dụ: IELTS, TOEIC, môn đại học, Frontend Development, Backend Development, Data Analyst, AI Engineer).
 - **Learning_Score**: Chỉ số tổng hợp phản ánh hiệu quả và tiến độ học tập của sinh viên.
 - **Learning_DNA_Profile**: Hồ sơ học tập cá nhân do Learning_DNA_Engine tạo ra.
+- **Web_UI**: Toàn bộ giao diện người dùng web của System, gồm trang landing và ứng dụng SPA (Single Page Application).
+- **Theme_Manager**: Thành phần phía giao diện chịu trách nhiệm áp dụng, chuyển đổi và ghi nhớ chế độ hiển thị sáng/tối (theme).
+- **Theme**: Chế độ hiển thị giao diện, có hai giá trị là "sáng" (light) và "tối" (dark).
+- **Content_Generator**: Thành phần ở lớp backend sinh nội dung AI (câu hỏi đánh giá, nội dung lộ trình học, lộ trình nghề nghiệp), có hai triển khai: adapter gọi Gemini thật và placeholder dự phòng.
+- **Gemini_Adapter**: Triển khai của Content_Generator gọi Gemini API qua HTTP để sinh nội dung AI thật.
+- **Gemini_API**: Dịch vụ AI sinh nội dung của Google được gọi qua HTTP, cấu hình qua section "Gemini" trong appsettings.
+- **Placeholder_Content_Generator**: Triển khai dự phòng (deterministic) của Content_Generator, dùng khi Gemini chưa cấu hình hoặc gọi thất bại.
+- **Prediction_Service**: Thành phần ở lớp backend dự đoán xác suất đạt mục tiêu cho Academic_Twin, có hai triển khai: adapter gọi ML_Service thật và placeholder dự phòng.
+- **ML_Service**: Microservice Python (Scikit-learn) được gọi qua HTTP để dự đoán xác suất đạt mục tiêu (GPA/TOEIC/IELTS), cấu hình qua section "MlService" trong appsettings.
+- **ML_Adapter**: Triển khai của Prediction_Service gọi ML_Service qua HTTP.
+- **Placeholder_Prediction_Service**: Triển khai dự phòng (deterministic) của Prediction_Service, dùng khi ML_Service chưa cấu hình hoặc gọi thất bại.
+- **WCAG_AA**: Mức tuân thủ AA của Web Content Accessibility Guidelines, yêu cầu tỷ lệ tương phản tối thiểu 4.5:1 cho văn bản thường.
 
 ## Requirements
 
@@ -178,3 +190,53 @@ Tài liệu này mô tả các yêu cầu cho phạm vi MVP (Minimum Viable Prod
 1. WHEN một sinh viên yêu cầu truy cập dữ liệu học tập, THE System SHALL chỉ trả về dữ liệu thuộc về tài khoản đã xác thực của sinh viên đó.
 2. IF một sinh viên đã xác thực yêu cầu truy cập dữ liệu thuộc về tài khoản khác, THEN THE System SHALL từ chối yêu cầu và trả về mã trạng thái 403.
 3. WHEN một phiên đăng nhập vượt quá thời gian hết hạn của JWT, THE System SHALL yêu cầu sinh viên xác thực lại trước khi truy cập tài nguyên được bảo vệ.
+
+### Requirement 15: Dark Mode — Chế độ hiển thị sáng/tối
+
+**User Story:** Là một sinh viên, tôi muốn chuyển đổi giữa chế độ sáng và tối, để xem giao diện thoải mái với mắt theo môi trường và sở thích của tôi.
+
+#### Acceptance Criteria
+
+1. WHEN một sinh viên mở Web_UI lần đầu mà chưa có lựa chọn Theme đã lưu, THE Theme_Manager SHALL áp dụng Theme theo giá trị `prefers-color-scheme` của hệ điều hành.
+2. WHEN một sinh viên kích hoạt nút chuyển đổi Theme, THE Theme_Manager SHALL chuyển Theme hiện tại sang giá trị còn lại và áp dụng ngay cho toàn bộ Web_UI gồm trang landing và ứng dụng SPA.
+3. WHEN một sinh viên thay đổi Theme, THE Theme_Manager SHALL lưu lựa chọn Theme vào localStorage của trình duyệt.
+4. WHEN một sinh viên mở lại Web_UI và đã có lựa chọn Theme lưu trong localStorage, THE Theme_Manager SHALL áp dụng Theme đã lưu thay vì giá trị `prefers-color-scheme`.
+5. THE Web_UI SHALL đạt tỷ lệ tương phản tối thiểu 4.5:1 giữa màu văn bản và màu nền của vùng body theo chuẩn WCAG_AA ở cả Theme sáng và Theme tối.
+6. THE Web_UI SHALL sử dụng các màu nền và màu chữ khác với màu đen thuần (#000000) và trắng thuần (#FFFFFF) cho vùng body ở cả hai Theme.
+
+### Requirement 16: Responsive & Mobile Friendly — Giao diện thích ứng
+
+**User Story:** Là một sinh viên, tôi muốn sử dụng nền tảng trên điện thoại, máy tính bảng và máy tính để bàn, để học tập trên thiết bị bất kỳ mà tôi có.
+
+#### Acceptance Criteria
+
+1. WHILE chiều rộng khung hiển thị nhỏ hơn 768 pixel, THE Web_UI SHALL trình bày bố cục dành cho mobile với các thành phần xếp theo chiều dọc và không xuất hiện cuộn ngang.
+2. WHILE chiều rộng khung hiển thị từ 768 pixel đến 1023 pixel, THE Web_UI SHALL trình bày bố cục dành cho tablet thích ứng với khoảng kích thước đó.
+3. WHILE chiều rộng khung hiển thị từ 1024 pixel trở lên, THE Web_UI SHALL trình bày bố cục dành cho desktop thích ứng với khoảng kích thước đó.
+4. WHILE chiều rộng khung hiển thị nhỏ hơn 768 pixel, THE Web_UI SHALL hiển thị thành phần điều hướng (navigation) ở dạng thu gọn có thể mở rộng theo thao tác của sinh viên.
+5. THE Web_UI SHALL trình bày các biểu mẫu (form), dashboard và các view AI ở dạng thích ứng theo từng khoảng breakpoint mobile, tablet và desktop.
+6. THE Web_UI SHALL khai báo thẻ meta viewport với `width=device-width` để hiển thị đúng tỷ lệ trên thiết bị di động.
+
+### Requirement 17: Tích hợp Gemini API thật cho sinh nội dung AI
+
+**User Story:** Là một sinh viên, tôi muốn nội dung đánh giá, lộ trình học và lộ trình nghề nghiệp được sinh bởi AI thật, để nhận nội dung chất lượng và phù hợp hơn.
+
+#### Acceptance Criteria
+
+1. WHERE section "Gemini" trong appsettings đã cấu hình đầy đủ ApiKey và Endpoint, THE Content_Generator SHALL dùng Gemini_Adapter để gọi Gemini_API qua HTTP nhằm sinh câu hỏi đánh giá, nội dung lộ trình học và lộ trình nghề nghiệp.
+2. IF section "Gemini" chưa cấu hình ApiKey hoặc Endpoint, THEN THE Content_Generator SHALL dùng Placeholder_Content_Generator để sinh nội dung.
+3. IF Gemini_API trả về lỗi khi được Gemini_Adapter gọi, THEN THE Content_Generator SHALL dùng Placeholder_Content_Generator để sinh nội dung cho yêu cầu đó.
+4. IF Gemini_API không phản hồi trong thời gian chờ tối đa được cấu hình, THEN THE Gemini_Adapter SHALL hủy yêu cầu và THE Content_Generator SHALL dùng Placeholder_Content_Generator để sinh nội dung cho yêu cầu đó.
+5. WHEN Gemini_Adapter nhận phản hồi thành công từ Gemini_API, THE Gemini_Adapter SHALL trả về nội dung theo cùng cấu trúc dữ liệu mà các thành phần ở lớp Application kỳ vọng phân tích.
+
+### Requirement 18: ML Prediction Service thật cho Academic Twin
+
+**User Story:** Là một sinh viên, tôi muốn dự đoán khả năng đạt mục tiêu được tính bởi mô hình học máy thật, để nhận ước lượng đáng tin cậy hơn cho Academic Twin.
+
+#### Acceptance Criteria
+
+1. WHERE section "MlService" trong appsettings đã cấu hình Endpoint, THE Prediction_Service SHALL dùng ML_Adapter để gọi ML_Service qua HTTP nhằm dự đoán xác suất đạt mục tiêu GPA, TOEIC hoặc IELTS cho Academic_Twin.
+2. IF section "MlService" chưa cấu hình Endpoint, THEN THE Prediction_Service SHALL dùng Placeholder_Prediction_Service để dự đoán xác suất đạt mục tiêu.
+3. IF ML_Service trả về lỗi khi được ML_Adapter gọi, THEN THE Prediction_Service SHALL dùng Placeholder_Prediction_Service để dự đoán xác suất cho yêu cầu đó.
+4. IF ML_Service không phản hồi trong thời gian chờ tối đa được cấu hình, THEN THE ML_Adapter SHALL hủy yêu cầu và THE Prediction_Service SHALL dùng Placeholder_Prediction_Service để dự đoán xác suất cho yêu cầu đó.
+5. WHEN ML_Adapter nhận phản hồi thành công từ ML_Service, THE ML_Adapter SHALL trả về một xác suất nằm trong khoảng [0, 1].

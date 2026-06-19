@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -34,7 +35,15 @@ public sealed class JwtMiddlewareIntegrationTests
 
     public JwtMiddlewareIntegrationTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["UseInMemoryDatabase"] = "true"
+                }));
+        });
         // Đọc cấu hình thực mà host dùng để xác minh JWT, đảm bảo token test
         // được ký bằng đúng Key/Issuer/Audience.
         _configuration = _factory.Services.GetRequiredService<IConfiguration>();
