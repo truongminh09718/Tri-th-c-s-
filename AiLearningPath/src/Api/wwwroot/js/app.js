@@ -424,8 +424,27 @@ function renderQuestions(view, a) {
       if (Object.keys(answers).length < a.questions.length) { toast("Vui lòng trả lời tất cả câu hỏi trước khi nộp.", "err"); return; }
       e.target.disabled = true; e.target.textContent = "Đang chấm bài…";
       try {
-        const payload = { answers: a.questions.map((q) => ({ questionId: q.id, selectedOption: answers[q.id] })) };
-        const r = await api(`/api/users/${State.userId}/assessments/${a.id}/submit`, { method: "POST", body: payload });
+    const currentGoal = (a.learningGoal || State.profile?.learningGoal || State.learningGoal || "TOEIC").toUpperCase();
+
+const payload = {
+  goal: currentGoal.includes("IELTS") ? "IELTS" : "TOEIC",
+  answers: a.questions.map((q, index) => {
+    const selected = answers[q.id];
+    const optionIndex = q.options.indexOf(selected);
+    const answerLetter = ["A", "B", "C", "D"][optionIndex] || "";
+
+    return {
+      questionId: index + 1,
+      answer: answerLetter
+    };
+  })
+};
+
+console.log("GRADE PAYLOAD:", payload);
+       const r = await api(`/api/ai-engineer/grade`, {
+  method: "POST",
+  body: payload
+});
         State.lastResult = r;
         toast("Đã chấm bài. Learning DNA của bạn đã được tạo.");
         renderAssessmentResult(view, r);
@@ -440,6 +459,46 @@ function renderQuestions(view, a) {
 
 function renderAssessmentResult(view, r) {
   view.innerHTML = "";
+  if (r.score !== undefined || r.correctAnswers !== undefined) {
+  view.append(
+    el("div", { class: "grid cols-3 reveal" },
+      metric("Score", `${r.score || 0}/100`),
+metric("Correct", `${r.correctAnswers || 0}/${r.totalQuestions || 0}`),
+metric("Level", r.level || "N/A")
+    ),
+    el("div", { class: "grid cols-2", style: "margin-top:16px" },
+      el("div", { class: "card" },
+        el("h3", {}, "Strength"),
+        el("p", {}, r.strength || "No data")
+      ),
+      el("div", { class: "card" },
+        el("h3", {}, "Weakness"),
+        el("p", {}, r.weakness || "No data")
+      )
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "AI Recommendation"),
+      el("p", {}, r.advice || "No recommendation")
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "Daily Plan"),
+      el("ul", {}, ...(r.dailyPlan || []).map(x => el("li", {}, x)))
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "Weekly Plan"),
+      el("ul", {}, ...(r.weeklyPlan || []).map(x => el("li", {}, x)))
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "Monthly Plan"),
+      el("ul", {}, ...(r.monthlyPlan || []).map(x => el("li", {}, x)))
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "Badges"),
+      el("div", { class: "chip-row" }, ...(r.badges || []).map(x => el("span", { class: "pill" }, x)))
+    )
+  );
+  return;
+}
   const chips = (arr, cls) => arr.length
     ? el("div", { class: "chip-row" }, ...arr.map((s) => el("span", { class: `pill ${cls}` }, s)))
     : el("span", { class: "faint" }, "Không có dữ liệu.");
@@ -495,17 +554,41 @@ ROUTES.dna = async (view) => {
 // 4. LEARNING PATH
 // ====================================================================
 ROUTES.path = async (view) => {
+  try {
+    State.profile = await api(
+        `/api/users/${State.userId}/profile`
+    );
+} catch {}
   view.innerHTML = "";
   view.append(viewHeadDesc("Sinh lộ trình học tập cá nhân hóa theo tháng, tuần và ngày. Cần hoàn thành bài đánh giá trước. Hệ thống sẽ cảnh báo nếu thời gian mục tiêu không đủ."));
 
-  const goal = State.profile?.learningGoal;
+  const goal =
+    State.profile?.learningGoal ||
+    State.profile?.goal ||
+    "TOEIC";
   if (!goal) {
     view.append(emptyState(ICONS.target, "Chưa có mục tiêu học tập",
       "Chọn mục tiêu học tập trong Hồ sơ trước khi sinh lộ trình.",
       "Tới Hồ sơ", () => go("profile")));
     return;
   }
-
+if (State.lastResult) {
+  view.append(
+    el("div", { class: "card" },
+      el("h3", {}, "Daily Plan"),
+      el("ul", {}, ...(State.lastResult.dailyPlan || []).map(x => el("li", {}, x)))
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "Weekly Plan"),
+      el("ul", {}, ...(State.lastResult.weeklyPlan || []).map(x => el("li", {}, x)))
+    ),
+    el("div", { class: "card", style: "margin-top:16px" },
+      el("h3", {}, "Monthly Plan"),
+      el("ul", {}, ...(State.lastResult.monthlyPlan || []).map(x => el("li", {}, x)))
+    )
+  );
+  return;
+}
   const gen = el("div", { class: "card card-pad-lg reveal" },
     el("div", { class: "grid cols-2" },
       el("div", { class: "field" },
@@ -519,7 +602,7 @@ ROUTES.path = async (view) => {
 
   view.append(gen);
   // show last generated path if present this session
-  if (State._lastPath) renderPath(view, State._lastPath, false);
+ // if (State._lastPath) renderPath(view, State._lastPath, false);
 };
 
 async function generatePath(view, btn) {
@@ -583,95 +666,74 @@ function renderPath(view, p, scroll) {
 // ====================================================================
 ROUTES.dashboard = async (view) => {
   view.innerHTML = "";
-  view.append(viewHeadDesc("Theo dõi Learning Score, tỷ lệ hoàn thành kế hoạch, tổng số giờ học và tiến độ theo tuần, tháng."));
-  let d;
-  try { d = await api(`/api/users/${State.userId}/dashboard`); }
-  catch (err) { toast(err.message, "err"); return; }
+  const r = State.lastResult;
 
-  if (d.isEmpty) {
-    view.append(emptyState(ICONS.chart, "Chưa có dữ liệu học tập",
-      d.guidance || "Hãy sinh lộ trình học và bắt đầu hoàn thành các nhiệm vụ để theo dõi tiến độ.",
-      "Sinh lộ trình học", () => go("path")));
+  view.append(viewHeadDesc("Theo dõi kết quả sau bài đánh giá năng lực."));
+
+  if (!r) {
+    view.append(emptyState(ICONS.chart, "Chưa có dữ liệu tiến độ",
+      "Hãy làm bài đánh giá năng lực trước.",
+      "Làm bài đánh giá", () => go("assessment")));
     return;
   }
 
-  view.append(el("div", { class: "grid cols-3 reveal" },
-    metric("Learning Score", `${num(d.learningScore, 1)}<small>/100</small>`),
-    metric("Tỷ lệ hoàn thành", pct(d.completionRate)),
-    metric("Tổng giờ học", `${num(d.totalStudyHours, 1)}<small>h</small>`)));
-
-  view.append(el("div", { class: "card", style: "margin-top:18px" },
-    el("div", { class: "row between", style: "margin-bottom:12px" },
-      el("div", { class: "section-title" }, "Hoàn thành nhiệm vụ"),
-      el("span", { class: "faint" }, `${d.completedTasks}/${d.totalTasks} nhiệm vụ`)),
-    el("div", { class: "bar" }, el("span", { style: `width:${pct(d.completionRate)}` }))));
-
-  // weekly chart (simple bars)
-  if (d.chart?.weekly?.length) {
-    const max = Math.max(...d.chart.weekly.map((w) => w.averageLearningScore), 1);
-    view.append(el("div", { class: "card", style: "margin-top:18px" },
-      el("div", { class: "section-title", style: "margin-bottom:14px" }, "Learning Score theo tuần"),
-      el("div", { class: "row", style: "align-items:flex-end;gap:10px;height:140px" },
-        ...d.chart.weekly.map((w) => el("div", { style: "flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end" },
-          el("div", { style: `width:100%;max-width:42px;background:linear-gradient(180deg,var(--accent),var(--accent-strong));border-radius:6px 6px 0 0;height:${Math.max(6, (w.averageLearningScore / max) * 100)}%` }),
-          el("span", { class: "faint", style: "font-size:11px" }, w.label))))));
-  }
+  view.append(
+    el("div", { class: "grid cols-3 reveal" },
+      metric("Score", `${r.score || 0}/100`),
+      metric("Correct", `${r.correctAnswers || 0}/${r.totalQuestions || 0}`),
+      metric("Wrong", `${r.wrongAnswers || 0}`)
+    ),
+    el("div", { class: "grid cols-2", style: "margin-top:18px" },
+      el("div", { class: "card" },
+        el("h3", {}, "Strength"),
+        el("p", {}, r.strength || "No data")
+      ),
+      el("div", { class: "card" },
+        el("h3", {}, "Weakness"),
+        el("p", {}, r.weakness || "No data")
+      )
+    ),
+    el("div", { class: "card", style: "margin-top:18px" },
+      el("h3", {}, "Progress Evaluation"),
+      el("p", {}, r.evaluation || "No evaluation")
+    ),
+    el("div", { class: "card", style: "margin-top:18px" },
+      el("h3", {}, "Next Step"),
+      el("p", {}, r.nextStep || "Keep practicing")
+    )
+  );
 };
-
 // ====================================================================
 // 6. ACADEMIC TWIN
 // ====================================================================
 ROUTES.twin = async (view) => {
   view.innerHTML = "";
-  view.append(viewHeadDesc("Mô phỏng khả năng đạt mục tiêu theo các mức thời lượng học mỗi ngày. Cần có mục tiêu học tập và kết quả đánh giá."));
+  const r = State.lastResult;
 
-  const card1 = el("div", { class: "card card-pad-lg reveal" },
-    el("div", { class: "field" },
-      el("label", { for: "f_hpd" }, "Số giờ học mỗi ngày"),
-      el("input", { class: "input", id: "f_hpd", type: "number", value: "3", min: "0", max: "24", step: "0.5" })),
-    el("button", { class: "btn btn-primary", onclick: (e) => simulateTwin(view, e.target) }, "Mô phỏng dự đoán"),
-    el("button", { class: "btn btn-ghost", style: "margin-left:10px", onclick: (e) => simulateRange(view, e.target) }, "So sánh nhiều mức (1-6h)"));
-  view.append(card1, el("div", { "data-twin": "1" }));
-};
+  view.append(viewHeadDesc("Mô phỏng khả năng cải thiện dựa trên điểm đánh giá AI Engineer."));
 
-async function simulateTwin(view, btn) {
-  const h = parseFloat($("#f_hpd").value);
-  btn.disabled = true; btn.textContent = "Đang mô phỏng…";
-  try {
-    const r = await api(`/api/users/${State.userId}/twin/simulate`, { method: "POST", body: { hoursPerDay: h } });
-    const slot = view.querySelector("[data-twin]"); slot.innerHTML = "";
-    slot.append(el("div", { class: "card reveal", style: "margin-top:18px;text-align:center" },
-      el("div", { class: "section-title" }, `Với ${num(h, 1)} giờ/ngày`),
-      el("div", { style: "font-size:54px;font-weight:700;color:var(--accent);letter-spacing:-0.03em;margin:8px 0" }, pct(r.successProbability)),
-      el("div", { class: "muted" }, "xác suất đạt mục tiêu ước lượng")));
-  } catch (err) { handleTwinErr(view, err); }
-  finally { btn.disabled = false; btn.textContent = "Mô phỏng dự đoán"; }
-}
-
-async function simulateRange(view, btn) {
-  btn.disabled = true; btn.textContent = "Đang mô phỏng…";
-  try {
-    const opts = [1, 2, 3, 4, 5, 6];
-    const r = await api(`/api/users/${State.userId}/twin/simulate-range`, { method: "POST", body: { hoursOptions: opts } });
-    const slot = view.querySelector("[data-twin]"); slot.innerHTML = "";
-    slot.append(el("div", { class: "twin-grid reveal", style: "margin-top:18px" },
-      ...r.map((p) => el("div", { class: "twin-cell" },
-        el("div", { class: "h" }, `${num(p.hoursPerDay, 1)} giờ/ngày`),
-        el("div", { class: "p" }, pct(p.successProbability))))));
-  } catch (err) { handleTwinErr(view, err); }
-  finally { btn.disabled = false; btn.textContent = "So sánh nhiều mức (1-6h)"; }
-}
-
-function handleTwinErr(view, err) {
-  toast(err.message, "err");
-  if (/đánh giá|mục tiêu|tiên quyết/i.test(err.message)) {
-    const slot = view.querySelector("[data-twin]"); slot.innerHTML = "";
-    slot.append(emptyState(ICONS.spark, "Chưa đủ điều kiện mô phỏng",
-      "Cần có mục tiêu học tập và hoàn thành bài đánh giá năng lực trước khi mô phỏng.",
+  if (!r) {
+    view.append(emptyState(ICONS.spark, "Chưa có dữ liệu mô phỏng",
+      "Hãy làm bài đánh giá năng lực trước.",
       "Làm bài đánh giá", () => go("assessment")));
+    return;
   }
-}
 
+  const score = r.score || 0;
+  const weak = r.weakness || "weak skill";
+
+  view.append(
+    el("div", { class: "grid cols-3 reveal" },
+      metric("Current Score", `${score}/100`),
+      metric("Target Score", `${Math.min(score + 25, 100)}/100`),
+      metric("Focus Skill", weak)
+    ),
+    el("div", { class: "card", style: "margin-top:18px" },
+      el("h3", {}, "Prediction"),
+      el("p", {}, `If you study 2 hours per day and focus on ${weak}, your score may improve by 15-25 points in 4 weeks.`)
+    )
+  );
+};
 // ====================================================================
 // 7. CAREER PATH
 // ====================================================================
