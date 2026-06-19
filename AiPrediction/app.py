@@ -71,6 +71,10 @@ def simulate_twin():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
+@app.route('/')
+def home():
+    return app.send_static_file('index.html')
+
 # KHOI CHAY SERVER (CHAY MAY TINH CA NHAN CONG 5000)
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
