@@ -107,6 +107,12 @@ builder.Services.Configure<MlServiceOptions>(builder.Configuration.GetSection(Ml
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
 builder.Services.AddHttpClient();
 
+builder.Services.AddHttpClient("AiPredictionClient", client =>
+{
+    var baseUrl = builder.Configuration["AiPrediction:BaseUrl"] ?? "http://127.0.0.1:5000/";
+    client.BaseAddress = new Uri(baseUrl);
+});
+
 // IContentGenerator (Gemini, R5.1/R7.1/R10/R17): sinh câu hỏi đánh giá, nội dung lộ trình học
 // và lộ trình kỹ năng nghề nghiệp.
 // Luôn đăng ký PlaceholderContentGenerator làm fallback xác định. Khi section "Gemini" đã
@@ -171,6 +177,8 @@ builder.Services
             ClockSkew = TimeSpan.Zero
         };
     });
+
+builder.Services.AddControllers();
 
 builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
