@@ -28,3 +28,12 @@ node_modules/
 # OS
 Thumbs.db
 .DS_Store
+
+# Office documents (tài liệu nội bộ, không đưa vào mã nguồn)
+*.docx
+*.xlsx
+~$*
+
+# Trained model binaries (sinh lại bằng train.py)
+*.pkl
+
