@@ -1244,7 +1244,7 @@ ROUTES.career = async (view) => {
 
   const labels = { Frontend: "Frontend Developer", Backend: "Backend Developer", DataAnalyst: "Data Analyst", AIEngineer: "AI Engineer", Tester: "Tester / QA" };
   const picker = el("div", { class: "grid cols-3 reveal" },
-    ...list.map((c) => el("button", { class: "card", style: "text-align:left;cursor:pointer;border-color:var(--border)",
+    ...list.map((c) => el("button", { class: "card", style: "text-align:left;cursor:pointer;border-color:var(--border);color:var(--text);font-family:inherit",
       onclick: (e) => generateCareer(view, c, e.currentTarget) },
       el("span", { class: "nav-ic", style: "color:var(--accent)", html: ICONS.briefcase }),
       el("h3", { style: "font-size:17px;margin-top:12px" }, labels[c] || c),
