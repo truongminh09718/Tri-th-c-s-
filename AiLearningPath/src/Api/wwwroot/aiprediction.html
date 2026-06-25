@@ -23,12 +23,21 @@
             --bg-container: #ffffff;
             --text-main: #000000;
             --border-input: #ccd6e0;
-            --bg-result: #eef3fb;
-            --border-result: #d6e0f1;
+            --bg-result: #ecddd4;
+            --border-result: #a8442b;
             --shadow-container: rgba(0,0,0,0.08);
             --bg-input: #ffffff;
             --text-link: #1f4d7a;
             --text-input: #000000;
+
+            --color-accent: #a8442b;
+            --color-accent-hover: #84301a;
+
+            /* Banner variables */
+            --bg-banner: #f6eeea;
+            --border-banner: #e1d4cd;
+            --text-banner-label: #a8442b;
+            --text-banner-value: #000000;
 
             /* Error colors */
             --bg-error: #ffe7e7;
@@ -41,12 +50,21 @@
             --bg-container: #1a1c20;
             --text-main: #ffffff;
             --border-input: #2d323b;
-            --bg-result: #0f3460;
-            --border-result: #1e3a5f;
+            --bg-result: #2e211c;
+            --border-result: #ce6247;
             --shadow-container: rgba(0,0,0,0.4);
             --bg-input: #1c1d22;
             --text-link: #64b5f6;
             --text-input: #ffffff;
+
+            --color-accent: #ce6247;
+            --color-accent-hover: #dd7458;
+
+            /* Banner variables */
+            --bg-banner: #231c19;
+            --border-banner: #3d2f2b;
+            --text-banner-label: #ce6247;
+            --text-banner-value: #ffffff;
 
             /* Error colors */
             --bg-error: #3d1f1f;
@@ -93,9 +111,9 @@
             transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
         
-        /* Action buttons with static color schema (WCAG AA compliant dark blue) */
+        /* Action buttons with dominant theme color schema (WCAG AA compliant printed brick orange) */
         #btn-predict, #btn-simulate {
-            background: #1f4d7a;
+            background: var(--color-accent);
             color: #ffffff;
             border: none;
             padding: 14px 22px;
@@ -107,7 +125,7 @@
             transition: all 0.3s ease;
         }
         #btn-predict:hover, #btn-simulate:hover {
-            background: #163d5c;
+            background: var(--color-accent-hover);
             transform: translateY(-2px);
             box-shadow: 0 8px 16px var(--shadow-container);
         }
@@ -139,10 +157,13 @@
             margin-bottom: 24px;
         }
         .top-nav a {
-            color: var(--text-link);
+            color: var(--color-accent);
             text-decoration: none;
             font-weight: 600;
             transition: color 0.3s ease;
+        }
+        .top-nav a:hover {
+            color: var(--color-accent-hover);
         }
 
         /* theme toggle button styled like landing page index.html */
@@ -201,9 +222,9 @@
         <h1>AI Learning Path</h1>
         <p>Dự đoán kết quả học tập và mô phỏng xác suất đạt mục tiêu dựa trên hồ sơ của bạn.</p>
 
-        <div id="goal-banner" style="background:#eef3fb;border:1px solid #d6e0f1;border-radius:10px;padding:14px 16px;margin-bottom:20px;">
-            <span style="font-weight:600;color:#1f4d7a;">Mục tiêu hiện tại:</span>
-            <span id="goal-text">Đang tải hồ sơ…</span>
+        <div id="goal-banner" style="background: var(--bg-banner); border: 1px solid var(--border-banner); border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; transition: background 0.3s ease, border-color 0.3s ease;">
+            <span style="font-weight: 600; color: var(--text-banner-label); transition: color 0.3s ease;">Mục tiêu hiện tại:</span>
+            <span id="goal-text" style="color: var(--text-banner-value); font-weight: 600; transition: color 0.3s ease;">Đang tải hồ sơ…</span>
         </div>
 
         <label for="study_hours_per_day">Giờ học mỗi ngày</label>
@@ -310,22 +331,29 @@
         document.getElementById('btn-predict').addEventListener('click', async () => {
             const data = await postData('/predict');
             if (!data) return;
+            const goalLabel = data.goal_label || data.goalLabel || data.GoalLabel || "";
+            const metricLabel = data.metric_label || data.metricLabel || data.MetricLabel || "";
+            const predictedDisplay = data.predicted_display || data.predictedDisplay || data.PredictedDisplay || "";
+            const targetDisplay = data.target_display || data.targetDisplay || data.TargetDisplay || "";
             showResult(`
                 <p><strong>Kết quả dự đoán theo mục tiêu của bạn:</strong></p>
-                <p>Mục tiêu: <strong>${data.goal_label}</strong></p>
-                <p>${data.metric_label}: <strong>${data.predicted_display}</strong></p>
-                <p>Mức mục tiêu: <strong>${data.target_display}</strong></p>
+                <p>Mục tiêu: <strong>${goalLabel}</strong></p>
+                <p>${metricLabel}: <strong>${predictedDisplay}</strong></p>
+                <p>Mức mục tiêu: <strong>${targetDisplay}</strong></p>
             `);
         });
 
         document.getElementById('btn-simulate').addEventListener('click', async () => {
             const data = await postData('/twin-simulation');
             if (!data) return;
+            const target = data.target || data.Target || "";
+            const predictedDisplay = data.predicted_display || data.predictedDisplay || data.PredictedDisplay || "";
+            const probabilitySuccessPercent = data.probability_success_percent || data.probabilitySuccessPercent || data.ProbabilitySuccessPercent || 0;
             showResult(`
                 <p><strong>Mô phỏng theo mục tiêu của bạn:</strong></p>
-                <p>Mục tiêu: <strong>${data.target}</strong></p>
-                <p>Điểm dự đoán: <strong>${data.predicted_display}</strong></p>
-                <p>Xác suất đạt mục tiêu: <strong>${data.probability_success_percent}%</strong></p>
+                <p>Mục tiêu: <strong>${target}</strong></p>
+                ${predictedDisplay ? `<p>Điểm dự đoán: <strong>${predictedDisplay}</strong></p>` : ''}
+                <p>Xác suất đạt mục tiêu: <strong>${probabilitySuccessPercent}%</strong></p>
             `);
         });
 
