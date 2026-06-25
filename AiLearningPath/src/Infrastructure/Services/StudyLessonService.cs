@@ -251,7 +251,7 @@ public sealed class StudyLessonService : IStudyLessonService
             content = BuildGenericContent(learningGoal, skill);
         }
 
-        return content with { Quizzes = ExpandQuizzes(learningGoal, skill, content.Quizzes, 10) };
+        return content with { Quizzes = ExpandQuizzes(learningGoal, skill, content.Quizzes, 15) };
     }
 
     private static IReadOnlyList<LessonQuiz> ExpandQuizzes(
@@ -288,7 +288,7 @@ public sealed class StudyLessonService : IStudyLessonService
             }
         }
 
-        // Một số kỹ năng trong ngân hàng đánh giá có ít hơn 10 mẫu. Lặp lại theo vòng
+        // Một số kỹ năng trong ngân hàng đánh giá có ít hơn 15 mẫu. Lặp lại theo vòng
         // dưới dạng câu luyện tập bổ sung để phiên học vẫn luôn đủ số lượng yêu cầu.
         var source = result.ToList();
         for (var index = 0; result.Count < count; index++)

@@ -337,9 +337,29 @@ public sealed class GeminiContentGenerator : IContentGenerator
             }
         }
 
-        // Fallback: sinh cấu trúc tối thiểu từ Learning Goal + số câu hỏi yêu cầu.
+        // Fallback chất lượng: ưu tiên ngân hàng câu hỏi THẬT theo Learning Goal (giống
+        // PlaceholderContentGenerator) để bài đánh giá đo được năng lực thật và chức năng
+        // tìm điểm mạnh/yếu hoạt động đúng. Tránh sinh câu hỏi giả "Skill-N" với mọi đáp án
+        // đều là "A" (khiến mọi lựa chọn đầu tiên đều đúng, làm hỏng phân tích điểm yếu).
         var count = ReadQuestionCount(request);
         var goal = request.LearningGoal;
+
+        var bankQuestions = AssessmentQuestionBank.GetQuestions(goal, count);
+        if (bankQuestions.Count > 0)
+        {
+            var fromBank = bankQuestions
+                .Select(t => new GeneratedQuestion(
+                    Id: Guid.NewGuid(),
+                    SkillArea: t.SkillArea,
+                    Prompt: t.Prompt,
+                    Options: t.Options,
+                    CorrectOption: t.CorrectOption))
+                .ToList();
+
+            return JsonFieldSerializer.Serialize(new GeneratedAssessmentContent(fromBank));
+        }
+
+        // Goal chưa có trong ngân hàng: sinh cấu trúc tối thiểu để giữ luồng hoạt động.
         var questions = Enumerable.Range(1, count)
             .Select(i => new GeneratedQuestion(
                 Id: Guid.NewGuid(),

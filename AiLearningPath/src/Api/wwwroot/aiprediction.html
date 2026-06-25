@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Learning Path - Dự đoán GPA & TOEIC</title>
+    <title>AI Learning Path - Dự đoán &amp; Mô phỏng kết quả</title>
     <script>
         (function () {
             try {
@@ -199,7 +199,12 @@
             </div>
         </div>
         <h1>AI Learning Path</h1>
-        <p>Nhập dữ liệu để dự đoán GPA, TOEIC và mô phỏng xác suất đạt TOEIC 700.</p>
+        <p>Dự đoán kết quả học tập và mô phỏng xác suất đạt mục tiêu dựa trên hồ sơ của bạn.</p>
+
+        <div id="goal-banner" style="background:#eef3fb;border:1px solid #d6e0f1;border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+            <span style="font-weight:600;color:#1f4d7a;">Mục tiêu hiện tại:</span>
+            <span id="goal-text">Đang tải hồ sơ…</span>
+        </div>
 
         <label for="study_hours_per_day">Giờ học mỗi ngày</label>
         <input id="study_hours_per_day" type="number" step="0.1" min="0" placeholder="Ví dụ: 3.5" />
@@ -214,8 +219,8 @@
         <input id="historical_gpa" type="number" step="0.01" min="0" max="4" placeholder="Ví dụ: 3.2" />
 
         <div>
-            <button id="btn-predict">Dự đoán GPA & TOEIC</button>
-            <button id="btn-simulate">Mô phỏng TOEIC 700</button>
+            <button id="btn-predict">Dự đoán kết quả</button>
+            <button id="btn-simulate">Mô phỏng điểm số</button>
         </div>
 
         <div id="result" class="result" style="display:none;"></div>
@@ -224,6 +229,47 @@
     <script>
         const resultBox = document.getElementById('result');
         const apiBase = '/api/aiprediction';
+
+        // Mục tiêu lấy từ hồ sơ người dùng (liên kết với phần Hồ sơ trong ứng dụng).
+        const Profile = { goalType: null, targetScore: null };
+
+        const GOAL_LABELS = {
+            IELTS: "IELTS", TOEIC: "TOEIC", UniversitySubject: "Môn đại học (GPA)",
+            FrontendDevelopment: "Frontend Development", BackendDevelopment: "Backend Development",
+            DataAnalyst: "Data Analyst", AIEngineer: "AI Engineer"
+        };
+
+        // Đọc hồ sơ người dùng đã đăng nhập (token + userId lưu ở localStorage bởi app.js).
+        async function loadProfileGoal() {
+            const token = localStorage.getItem("tts_token");
+            const userId = localStorage.getItem("tts_userId");
+            const goalEl = document.getElementById("goal-text");
+
+            if (!token || !userId) {
+                goalEl.innerHTML = 'Chưa đăng nhập. <a href="/app.html">Đăng nhập</a> và thiết lập hồ sơ để cá nhân hóa mục tiêu.';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/users/${userId}/profile`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error("profile");
+                const p = await res.json();
+                Profile.goalType = p.learningGoal || null;
+                Profile.targetScore = (p.targetScore != null ? Number(p.targetScore) : null);
+
+                if (Profile.goalType) {
+                    const label = GOAL_LABELS[Profile.goalType] || Profile.goalType;
+                    const scoreText = Profile.targetScore ? ` · mục tiêu ${Profile.targetScore}` : "";
+                    goalEl.textContent = `${label}${scoreText}`;
+                } else {
+                    goalEl.innerHTML = 'Chưa chọn mục tiêu. <a href="/app.html">Cập nhật hồ sơ</a> để cá nhân hóa.';
+                }
+            } catch {
+                goalEl.innerHTML = 'Không đọc được hồ sơ. <a href="/app.html">Mở ứng dụng</a> để kiểm tra đăng nhập.';
+            }
+        }
 
         function showResult(html, isError = false) {
             resultBox.style.display = 'block';
@@ -255,7 +301,9 @@
                 StudyHoursPerDay: Number(document.getElementById('study_hours_per_day').value),
                 AttendanceRate: Number(document.getElementById('attendance_rate').value),
                 MockTestScore: Number(document.getElementById('mock_test_score').value),
-                HistoricalGpa: Number(document.getElementById('historical_gpa').value)
+                HistoricalGpa: Number(document.getElementById('historical_gpa').value),
+                GoalType: Profile.goalType,
+                TargetScore: Profile.targetScore
             };
         }
 
@@ -263,9 +311,10 @@
             const data = await postData('/predict');
             if (!data) return;
             showResult(`
-                <p><strong>Kết quả dự đoán:</strong></p>
-                <p>GPA dự đoán: <strong>${data.predicted_gpa}</strong></p>
-                <p>TOEIC dự đoán: <strong>${data.predicted_toeic}</strong></p>
+                <p><strong>Kết quả dự đoán theo mục tiêu của bạn:</strong></p>
+                <p>Mục tiêu: <strong>${data.goal_label}</strong></p>
+                <p>${data.metric_label}: <strong>${data.predicted_display}</strong></p>
+                <p>Mức mục tiêu: <strong>${data.target_display}</strong></p>
             `);
         });
 
@@ -273,9 +322,10 @@
             const data = await postData('/twin-simulation');
             if (!data) return;
             showResult(`
-                <p><strong>Mô phỏng Academic Twin:</strong></p>
+                <p><strong>Mô phỏng theo mục tiêu của bạn:</strong></p>
                 <p>Mục tiêu: <strong>${data.target}</strong></p>
-                <p>Xác suất thành công: <strong>${data.probability_success_percent}%</strong></p>
+                <p>Điểm dự đoán: <strong>${data.predicted_display}</strong></p>
+                <p>Xác suất đạt mục tiêu: <strong>${data.probability_success_percent}%</strong></p>
             `);
         });
 
@@ -305,6 +355,9 @@
         });
 
         initTheme();
+
+        // Tải mục tiêu hồ sơ khi mở trang.
+        loadProfileGoal();
     </script>
 </body>
 </html>

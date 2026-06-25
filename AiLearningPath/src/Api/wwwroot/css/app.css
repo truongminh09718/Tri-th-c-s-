@@ -433,6 +433,115 @@ h1, h2, h3 { margin: 0; font-family: var(--font-display, "Sora", sans-serif); le
 .pomodoro-time { font-family: var(--font-display, "Sora", sans-serif); font-size: 48px; font-weight: 800; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
 .pomodoro-ring .faint { font-size: 12px; margin-top: 3px; }
 
+/* ============================================================
+   FloatingPomodoroClock — component đồng hồ nổi, mini progress ring
+   Nền trắng ngà, viền mảnh, nhấn đỏ gạch. Luôn nổi khi cuộn trang.
+   ============================================================ */
+.fpc {
+  --fpc-accent: #b6422a;
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 70;
+  width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  font-family: var(--font-ui, inherit);
+  user-select: none;
+  transition: opacity .2s ease, transform .2s ease;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.fpc.is-visible { opacity: 1; transform: translateY(0); }
+.fpc.is-dragging { transition: none; cursor: grabbing; }
+
+/* Thanh tiêu đề: vùng kéo thả + nút thu nhỏ */
+.fpc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: grab;
+  border-bottom: 1px solid var(--border);
+}
+.fpc-head:active { cursor: grabbing; }
+.fpc-title {
+  font-size: 11px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fpc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
+.fpc.is-running .fpc-dot { background: var(--fpc-accent); }
+.fpc.is-completed .fpc-dot { background: var(--danger); }
+.fpc-min {
+  display: grid; place-content: center;
+  width: 22px; height: 22px;
+  border: none; background: transparent; cursor: pointer;
+  color: var(--text-muted); border-radius: 5px; padding: 0;
+}
+.fpc-min:hover { background: var(--surface-3); color: var(--text); }
+.fpc-min svg { width: 15px; height: 15px; }
+
+/* Thân: ring + thời gian + nút */
+.fpc-body { padding: 12px 12px 13px; }
+.fpc-ring-wrap { display: grid; place-content: center; position: relative; margin: 0 auto 10px; width: 84px; height: 84px; }
+.fpc-ring { transform: rotate(-90deg); width: 84px; height: 84px; }
+.fpc-ring-track { fill: none; stroke: var(--surface-3); stroke-width: 7; }
+.fpc-ring-prog { fill: none; stroke: var(--fpc-accent); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+.fpc.is-completed .fpc-ring-prog { stroke: var(--danger); }
+.fpc-time {
+  position: absolute; inset: 0;
+  display: grid; place-content: center;
+  font-family: var(--font-display, "Sora", sans-serif);
+  font-size: 21px; font-weight: 800; letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.fpc-status { text-align: center; font-size: 11px; color: var(--text-muted); margin-bottom: 10px; min-height: 14px; }
+.fpc-actions { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.fpc-btn {
+  display: grid; place-content: center;
+  width: 34px; height: 34px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  transition: transform .08s ease, background .15s ease, border-color .15s ease;
+}
+.fpc-btn:hover { border-color: var(--fpc-accent); }
+.fpc-btn:active { transform: scale(.94); }
+.fpc-btn svg { width: 16px; height: 16px; }
+.fpc-btn-main { background: var(--fpc-accent); border-color: var(--fpc-accent); color: #fff; width: 40px; height: 40px; }
+.fpc-btn-main:hover { background: #9c381f; border-color: #9c381f; }
+.fpc-btn-main svg { width: 18px; height: 18px; }
+
+/* Trạng thái thu nhỏ: chỉ một pill nhỏ "25:00" */
+.fpc.is-minimized { width: auto; }
+.fpc.is-minimized .fpc-head { border-bottom: none; padding: 0; }
+.fpc.is-minimized .fpc-title,
+.fpc.is-minimized .fpc-body { display: none; }
+.fpc-pill {
+  display: none;
+  align-items: center; gap: 8px;
+  padding: 8px 13px; cursor: grab;
+  font-family: var(--font-display, "Sora", sans-serif);
+  font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  color: var(--text); font-size: 15px;
+}
+.fpc.is-minimized .fpc-pill { display: flex; }
+.fpc-pill .fpc-dot { width: 8px; height: 8px; }
+
+@media (max-width: 720px) {
+  .fpc { top: auto; bottom: 16px; right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fpc, .fpc-ring-prog, .fpc-btn { transition: none; }
+}
+
 .study-complete { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 18px; border-color: var(--accent); }
 .study-complete b, .study-complete span { display: block; }
 .study-complete .muted { margin-top: 4px; font-size: 13px; }

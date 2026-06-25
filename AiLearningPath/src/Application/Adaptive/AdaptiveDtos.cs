@@ -9,13 +9,18 @@ public interface IAdaptiveLearningService
         CancellationToken cancellationToken = default);
 }
 
-public sealed record AdaptivePathRequest(string? Reason = null);
+public sealed record AdaptivePathRequest(
+    string? Reason = null,
+    IReadOnlyList<string>? WeakSkills = null,
+    IReadOnlyList<string>? ProgressSignals = null);
 
 public sealed record AdaptivePathResponse(
     Guid EventId,
     Guid PathId,
     string Summary,
+    string Rationale,
     IReadOnlyList<string> AddedTasks,
+    IReadOnlyList<string> PrioritizedTasks,
     IReadOnlyList<string> FocusSkills,
     bool UsedFallback,
     bool FromCache,

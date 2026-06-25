@@ -38,8 +38,10 @@ public sealed record TutorMessageResponse(
 public sealed record DashboardInsightResponse(
     string Summary,
     IReadOnlyList<string> Risks,
+    IReadOnlyList<string> WeakSkills,
     IReadOnlyList<string> Recommendations,
     IReadOnlyList<string> NextActions,
+    double Confidence,
     bool UsedFallback,
     bool FromCache,
     string Provider);

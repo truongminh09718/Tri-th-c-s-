@@ -115,22 +115,16 @@ builder.Services.AddHttpClient("AiPredictionClient", client =>
 
 // IContentGenerator (Gemini, R5.1/R7.1/R10/R17): sinh câu hỏi đánh giá, nội dung lộ trình học
 // và lộ trình kỹ năng nghề nghiệp.
-// Luôn đăng ký PlaceholderContentGenerator làm fallback xác định. Khi section "Gemini" đã
-// cấu hình đầy đủ (ApiKey + Endpoint), bind IContentGenerator → ResilientContentGenerator bọc
-// adapter Gemini thật với placeholder dự phòng; ngược lại giữ hành vi cũ dùng placeholder.
+//
+// Luồng: IContentGenerator → AiContentGeneratorAdapter → IAiGateway (AiGateway). Quyết định
+// dùng Gemini thật hay PlaceholderContentGenerator được AiGateway xử lý tại RUNTIME dựa trên
+// GeminiOptions.IsConfigured (R17.1, R17.2), kèm cache + ghi log tương tác AI. Khi Gemini lỗi/
+// timeout, AiGateway tự fallback sang placeholder cho cùng yêu cầu (R17.3, R17.4) mà không ném
+// lỗi ra lớp Application. Vì vậy chỉ cần một đăng ký duy nhất, không phân nhánh theo cấu hình.
 builder.Services.AddScoped<PlaceholderContentGenerator>();
 builder.Services.AddHttpClient<GeminiContentGenerator>();
 builder.Services.AddScoped<IAiGateway, AiGateway>();
-
-var geminiOptions = builder.Configuration.GetSection(GeminiOptions.SectionName).Get<GeminiOptions>() ?? new GeminiOptions();
-if (GeminiOptions.IsConfigured(geminiOptions))
-{
-    builder.Services.AddScoped<IContentGenerator, AiContentGeneratorAdapter>();
-}
-else
-{
-    builder.Services.AddScoped<IContentGenerator, AiContentGeneratorAdapter>();
-}
+builder.Services.AddScoped<IContentGenerator, AiContentGeneratorAdapter>();
 
 // IPredictionService (ML, R9/R18): dự đoán xác suất đạt mục tiêu theo thời lượng học.
 // Luôn đăng ký PlaceholderPredictionService làm fallback xác định. Khi section "MlService"
@@ -159,6 +153,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // JWT authentication configured from appsettings ("Jwt" section)
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+var geminiOptions = builder.Configuration.GetSection(GeminiOptions.SectionName).Get<GeminiOptions>() ?? new GeminiOptions();
 ValidateProductionConfiguration(builder.Environment, jwtKey, geminiOptions, mlOptions);
 
 builder.Services

@@ -213,7 +213,6 @@ const NAV = [
   { id: "dashboard", label: "Tiến độ", icon: "chart" },
   { id: "ai", label: "AI Coach", icon: "bot" },
   { id: "schedule", label: "Smart Scheduler", icon: "calendar" },
-  { id: "adaptive", label: "Adaptive", icon: "adjust" },
   { id: "twin", label: "Academic Twin", icon: "spark" },
   { id: "career", label: "Hướng nghiệp", icon: "briefcase" },
 ];
@@ -250,6 +249,7 @@ function buildNav() {
 
 function go(route) {
   stopStudyTimer();
+  removeFloatTimer();
   State.route = route;
   document.querySelectorAll(".nav-link").forEach((l) =>
     l.classList.toggle("active", l.dataset.route === route));
@@ -281,6 +281,8 @@ const ICONS = {
   award: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M9 14l-1 7 4-2 4 2-1-7"/></svg>`,
   folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
   book: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a3 3 0 0 1 3-3h5v18H7a3 3 0 0 0-3 3z"/><path d="M20 5a3 3 0 0 0-3-3h-5v18h5a3 3 0 0 1 3 3z"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>`,
+  pause: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`,
 };
 
 // ====================================================================
@@ -667,6 +669,7 @@ ROUTES.study = async (view) => {
 
 async function loadStudyLesson(view, taskId = null) {
   stopStudyTimer();
+  removeFloatTimer();
   view.innerHTML = "";
   view.append(viewHeadDesc("Học nhiệm vụ tiếp theo trong lộ trình, tập trung theo Pomodoro và ghi nhận tiến độ sau mỗi buổi."));
   view.append(spinner(taskId ? "Đang mở bài học" : "Đang tải bài học"));
@@ -745,7 +748,7 @@ function renderStudyLesson(view, lesson) {
   const quizProgress = el("span", { class: "pill", id: "studyQuizProgress" }, `0/${lesson.quizzes.length} câu`);
   const quiz = el("div", { class: "card study-panel" },
     el("div", { class: "row between", style: "margin-bottom:16px" },
-      el("div", { class: "section-title", style: "margin-bottom:0" }, "Câu hỏi kiểm tra"),
+      el("div", { class: "section-title", style: "margin-bottom:0" }, "Câu hỏi bài học"),
       quizProgress),
     ...lesson.quizzes.map((question, questionIndex) => buildStudyQuestion(question, questionIndex, lesson.quizzes.length)));
 
@@ -773,6 +776,9 @@ function renderStudyLesson(view, lesson) {
     el("div", { class: "grid cols-2 study-grid", style: "margin-top:18px" }, quiz, pomodoro),
     completeBar,
     evaluation);
+
+  // Gắn đồng hồ nổi để luôn thấy thời gian khi cuộn trang làm bài.
+  mountFloatTimer();
 }
 
 function buildStudyQuestion(quiz, questionIndex, total) {
@@ -814,10 +820,53 @@ function answerStudyQuiz(button, selected, quiz) {
 
 function updateStudyTimerDisplay() {
   const display = $("#pomodoroTime");
-  if (!display) return;
   const minutes = Math.floor(StudyTimer.secondsLeft / 60);
   const seconds = StudyTimer.secondsLeft % 60;
-  display.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  const text = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  if (display) display.textContent = text;
+  const floatTime = $("#floatTimerTime");
+  if (floatTime) floatTime.textContent = text;
+}
+
+// ---- Đồng hồ nổi: bám màn hình, luôn thấy thời gian khi cuộn trang làm bài ----
+function mountFloatTimer() {
+  removeFloatTimer();
+  const node = el("div", { class: "float-timer", id: "floatTimer", role: "status", "aria-live": "polite" },
+    el("button", {
+      class: "btn btn-primary float-timer-btn", id: "floatTimerToggle", type: "button",
+      "aria-label": "Bắt đầu hoặc tạm dừng", html: ICONS.play,
+      onclick: toggleStudyTimer,
+    }),
+    el("div", { class: "float-timer-info" },
+      el("span", { class: "float-timer-label", id: "floatTimerLabel" }, "Pomodoro"),
+      el("span", { class: "float-timer-time", id: "floatTimerTime" }, "25:00")));
+  document.body.append(node);
+  // Kích hoạt hiệu ứng hiện sau khi gắn vào DOM.
+  requestAnimationFrame(() => node.classList.add("is-visible"));
+  updateStudyTimerDisplay();
+  syncFloatTimerState();
+}
+
+function removeFloatTimer() {
+  const existing = $("#floatTimer");
+  if (existing) existing.remove();
+}
+
+// Đồng bộ trạng thái (đang chạy / tạm dừng / xong) lên cả Pomodoro và đồng hồ nổi.
+function syncFloatTimerState() {
+  const running = !!StudyTimer.interval;
+  const done = StudyTimer.secondsLeft === 0;
+  const floatNode = $("#floatTimer");
+  const floatToggle = $("#floatTimerToggle");
+  const floatLabel = $("#floatTimerLabel");
+  if (floatNode) {
+    floatNode.classList.toggle("is-running", running);
+    floatNode.classList.toggle("is-done", done && !running);
+  }
+  if (floatToggle) floatToggle.innerHTML = running ? ICONS.pause : ICONS.play;
+  if (floatLabel) {
+    floatLabel.textContent = done ? "Hết giờ" : running ? "Đang tập trung" : "Tạm dừng";
+  }
 }
 
 function toggleStudyTimer() {
@@ -825,23 +874,26 @@ function toggleStudyTimer() {
   const status = $("#pomodoroStatus");
   if (StudyTimer.interval) {
     stopStudyTimer();
-    button.textContent = "Tiếp tục";
-    status.textContent = "Đang tạm dừng";
+    if (button) button.textContent = "Tiếp tục";
+    if (status) status.textContent = "Đang tạm dừng";
+    syncFloatTimerState();
     return;
   }
-  button.textContent = "Tạm dừng";
-  status.textContent = "Đang tập trung";
+  if (button) button.textContent = "Tạm dừng";
+  if (status) status.textContent = "Đang tập trung";
   StudyTimer.interval = setInterval(() => {
     StudyTimer.secondsLeft = Math.max(0, StudyTimer.secondsLeft - 1);
     StudyTimer.elapsedSeconds += 1;
     updateStudyTimerDisplay();
     if (StudyTimer.secondsLeft === 0) {
       stopStudyTimer();
-      button.textContent = "Bắt đầu lại";
-      status.textContent = "Hoàn thành một Pomodoro";
+      if (button) button.textContent = "Bắt đầu lại";
+      if (status) status.textContent = "Hoàn thành một Pomodoro";
+      syncFloatTimerState();
       toast("Hết 25 phút. Hãy nghỉ ngắn trước khi tiếp tục.");
     }
   }, 1000);
+  syncFloatTimerState();
 }
 
 function resetStudyTimer() {
@@ -853,6 +905,7 @@ function resetStudyTimer() {
   const status = $("#pomodoroStatus");
   if (button) button.textContent = "Bắt đầu";
   if (status) status.textContent = "Sẵn sàng tập trung";
+  syncFloatTimerState();
 }
 
 function buildStudyEvaluation(lesson) {
@@ -903,6 +956,7 @@ async function completeStudyLesson(lesson, button) {
     toast(result.message);
     const view = $("#view");
     view.innerHTML = "";
+    removeFloatTimer();
     view.append(emptyState(ICONS.award, "Hoàn thành bài học!",
       `Tiến độ hiện tại ${pct(result.completionRate)} · Learning Score ${num(result.learningScore, 1)}/100.`,
       "Học bài tiếp theo", () => go("study")));
@@ -1021,7 +1075,8 @@ async function loadAiInsight(slot, btn) {
       el("p", {}, r.summary || "Chưa có insight."),
       aiList("Rủi ro", r.risks),
       aiList("Kỹ năng yếu", r.weakSkills),
-      aiList("Khuyến nghị tuần tới", r.nextWeekRecommendations)));
+      aiList("Khuyến nghị tuần tới", r.recommendations),
+      aiList("Hành động tiếp theo", r.nextActions)));
   } catch (err) {
     slot.innerHTML = "";
     toast(err.message, "err");
@@ -1043,7 +1098,7 @@ async function askTutor(input, slot, btn) {
         el("span", { class: `pill ${r.usedFallback ? "pill-warn" : "pill-accent"}` }, r.usedFallback ? "fallback deterministic" : "AI live"),
         el("span", { class: "faint" }, `confidence ${num((r.confidence || 0) * 100)}%`)),
       el("p", {}, r.answer),
-      aiList("Tài liệu gợi ý", r.suggestedResources),
+      aiList("Tài liệu gợi ý", r.resources),
       aiList("Task liên quan", r.relatedTasks),
       el("div", { class: "row", style: "margin-top:12px;gap:8px" },
         el("button", { class: "btn btn-sm btn-ghost", onclick: () => sendAiFeedback("Tutor", r.conversationId, 5) }, "Hữu ích"),
@@ -1064,11 +1119,11 @@ function aiList(title, items) {
       : el("span", { class: "faint" }, "Chưa có dữ liệu."));
 }
 
-async function sendAiFeedback(targetType, targetId, rating) {
+async function sendAiFeedback(operation, targetId, rating) {
   try {
     await api(`/api/users/${State.userId}/ai/feedback`, {
       method: "POST",
-      body: { targetType, targetId, rating, comment: rating >= 4 ? "Useful demo answer" : "Needs improvement" }
+      body: { operation, targetId: String(targetId ?? ""), rating, comment: rating >= 4 ? "Useful demo answer" : "Needs improvement" }
     });
     toast("Đã lưu feedback AI.");
   } catch (err) { toast(err.message, "err"); }
@@ -1122,59 +1177,6 @@ async function generateSchedule(slot, btn) {
     toast(err.message, "err");
   } finally {
     btn.disabled = false; btn.textContent = "Tạo lịch học";
-  }
-}
-
-// ====================================================================
-// 8. ADAPTIVE LEARNING
-// ====================================================================
-ROUTES.adaptive = async (view) => {
-  view.innerHTML = "";
-  view.append(viewHeadDesc("Đề xuất patch lộ trình dựa trên tiến độ và kỹ năng yếu. Bản cũ không bị ghi đè; hệ thống lưu AdaptationEvent để audit."));
-  const slot = el("div", { "data-adaptive": "1", style: "margin-top:18px" });
-
-  if (!State._lastPath?.id) {
-    view.append(emptyState(ICONS.route, "Chưa có lộ trình trong phiên demo",
-      "Sinh lộ trình ở tab Lộ trình học trước, sau đó quay lại đây để AI đề xuất adaptive patch.",
-      "Sinh lộ trình học", () => go("path")));
-    return;
-  }
-
-  view.append(el("div", { class: "card card-pad-lg reveal" },
-    el("div", { class: "grid cols-2" },
-      el("div", { class: "field" },
-        el("label", { for: "f_adapt_weak" }, "Kỹ năng yếu"),
-        el("input", { class: "input", id: "f_adapt_weak", value: "foundation, practice consistency" })),
-      el("div", { class: "field" },
-        el("label", { for: "f_adapt_note" }, "Tín hiệu tiến độ"),
-        el("input", { class: "input", id: "f_adapt_note", value: "Learner needs more spaced practice this week" }))),
-    el("button", { class: "btn btn-primary", onclick: (e) => adaptPath(slot, e.target) }, "Đề xuất adaptive patch")),
-    slot);
-};
-
-async function adaptPath(slot, btn) {
-  const weakSkills = $("#f_adapt_weak").value.split(",").map((x) => x.trim()).filter(Boolean);
-  const progressSignals = [$("#f_adapt_note").value.trim()].filter(Boolean);
-  btn.disabled = true; btn.textContent = "Đang adapt...";
-  slot.innerHTML = ""; slot.append(spinner("AI đang đề xuất patch"));
-  try {
-    const r = await api(`/api/users/${State.userId}/learning-paths/${State._lastPath.id}/adapt`, {
-      method: "POST",
-      body: { weakSkills, progressSignals }
-    });
-    slot.innerHTML = "";
-    slot.append(el("div", { class: "ai-answer reveal" },
-      el("div", { class: "row", style: "gap:8px;margin-bottom:10px" },
-        el("span", { class: `pill ${r.usedFallback ? "pill-warn" : "pill-accent"}` }, r.usedFallback ? "fallback deterministic" : "AI live"),
-        el("span", { class: "faint" }, `${r.addedTasks.length} task mới`)),
-      el("p", {}, r.rationale || "Đã tạo adaptation event."),
-      aiList("Task thêm vào", r.addedTasks),
-      aiList("Task ưu tiên", r.prioritizedTasks)));
-  } catch (err) {
-    slot.innerHTML = "";
-    toast(err.message, "err");
-  } finally {
-    btn.disabled = false; btn.textContent = "Đề xuất adaptive patch";
   }
 }
 
