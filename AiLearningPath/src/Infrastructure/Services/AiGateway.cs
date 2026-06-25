@@ -49,7 +49,13 @@ public sealed class AiGateway : IAiGateway
         var sw = Stopwatch.StartNew();
         var cacheKey = BuildCacheKey(request);
 
-        if (_aiOptions.EnableCache)
+        // Cache chỉ có ý nghĩa khi gọi Gemini thật (tốn kém/độ trễ mạng). Khi Gemini chưa
+        // cấu hình, nội dung placeholder là xác định và tức thời, nên BỎ QUA cache để tránh
+        // hai lượt ghi DB thừa cho mỗi lần tạo bài (tăng tốc rõ rệt cho đánh giá năng lực).
+        var geminiConfigured = GeminiOptions.IsConfigured(_geminiOptions);
+        var useCache = _aiOptions.EnableCache && geminiConfigured;
+
+        if (useCache)
         {
             var cached = await _db.AiCacheEntries
                 .AsNoTracking()
@@ -75,7 +81,7 @@ public sealed class AiGateway : IAiGateway
 
         try
         {
-            if (!GeminiOptions.IsConfigured(_geminiOptions))
+            if (!geminiConfigured)
             {
                 provider = "placeholder";
                 usedFallback = true;
@@ -106,7 +112,7 @@ public sealed class AiGateway : IAiGateway
 
         sw.Stop();
 
-        if (_aiOptions.EnableCache)
+        if (useCache)
         {
             await UpsertCacheAsync(cacheKey, request, content, cancellationToken);
         }

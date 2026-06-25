@@ -7,6 +7,9 @@ obj/
 # Logs
 *.log
 
+# Agent runtime tooling/logs (không thuộc mã nguồn dự án)
+agent-tools/
+
 # Tooling caches
 .dotnet/
 .nuget/

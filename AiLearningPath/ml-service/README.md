@@ -63,7 +63,7 @@ Example:
 
 ```bash
 set ML_SERVICE_API_KEY=dev-secret
-curl -X POST http://localhost:8000/predict ^
+curl -X POST http://localhost:5000/predict ^
   -H "Content-Type: application/json" ^
   -H "X-ML-Service-Key: dev-secret" ^
   -d "{\"currentLevelScore\":65,\"hoursPerDay\":2.5,\"goalType\":\"IELTS\",\"targetDays\":90}"
@@ -87,15 +87,15 @@ Requires Python 3.10+.
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app:app --port 8000
+uvicorn app:app --host 127.0.0.1 --port 5000
 ```
 
 Useful URLs:
 
-- Health: `http://localhost:8000/health`
-- Ready: `http://localhost:8000/ready`
-- Version: `http://localhost:8000/version`
-- Swagger UI: `http://localhost:8000/docs`
+- Health: `http://localhost:5000/health`
+- Ready: `http://localhost:5000/ready`
+- Version: `http://localhost:5000/version`
+- Swagger UI: `http://localhost:5000/docs`
 
 ## Smoke Test
 

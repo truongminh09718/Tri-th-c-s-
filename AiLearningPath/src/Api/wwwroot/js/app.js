@@ -651,17 +651,13 @@ function renderPath(view, p, scroll) {
 // ====================================================================
 // 5. START STUDY
 // ====================================================================
-const StudyTimer = {
-  initialSeconds: 25 * 60,
-  secondsLeft: 25 * 60,
-  elapsedSeconds: 0,
-  interval: null,
-};
+// Đồng hồ Pomodoro nổi (component riêng trong pomodoro-clock.js).
+let studyClock = null;
 
 function stopStudyTimer() {
-  if (StudyTimer.interval) clearInterval(StudyTimer.interval);
-  StudyTimer.interval = null;
+  if (studyClock) { studyClock.destroy(); studyClock = null; }
 }
+function removeFloatTimer() { stopStudyTimer(); }
 
 ROUTES.study = async (view) => {
   await loadStudyLesson(view);
@@ -669,9 +665,8 @@ ROUTES.study = async (view) => {
 
 async function loadStudyLesson(view, taskId = null) {
   stopStudyTimer();
-  removeFloatTimer();
   view.innerHTML = "";
-  view.append(viewHeadDesc("Học nhiệm vụ tiếp theo trong lộ trình, tập trung theo Pomodoro và ghi nhận tiến độ sau mỗi buổi."));
+  view.append(viewHeadDesc("Không gian học tập tương tác: đọc kiến thức chính, làm phần Thực hành ngay và trả lời câu hỏi để ghi nhận tiến độ."));
   view.append(spinner(taskId ? "Đang mở bài học" : "Đang tải bài học"));
 
   let data;
@@ -680,7 +675,7 @@ async function loadStudyLesson(view, taskId = null) {
   catch (err) { toast(err.message, "err"); return; }
 
   view.innerHTML = "";
-  view.append(viewHeadDesc("Học nhiệm vụ tiếp theo trong lộ trình, tập trung theo Pomodoro và ghi nhận tiến độ sau mỗi buổi."));
+  view.append(viewHeadDesc("Không gian học tập tương tác: đọc kiến thức chính, làm phần Thực hành ngay và trả lời câu hỏi để ghi nhận tiến độ."));
 
   if (data.status !== "ready" || !data.lesson) {
     const states = {
@@ -693,92 +688,261 @@ async function loadStudyLesson(view, taskId = null) {
     return;
   }
 
-  StudyTimer.secondsLeft = StudyTimer.initialSeconds;
-  StudyTimer.elapsedSeconds = 0;
   stopStudyTimer();
   renderStudyLesson(view, data.lesson);
   if (taskId) {
-    view.querySelector(".study-hero")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    view.querySelector(".lesson-detail-panel")?.scrollTo({ top: 0, behavior: "smooth" });
     toast(`Đã mở bài ${data.lesson.skill}. Tài liệu và quiz đã được cập nhật.`);
   }
 }
 
 function renderStudyLesson(view, lesson) {
-  const dateText = new Intl.DateTimeFormat("vi-VN", {
-    weekday: "long", day: "2-digit", month: "2-digit", year: "numeric"
-  }).format(new Date());
+  const SKILL_ICONS = {
+    grammar: ICONS.clipboard, listening: ICONS.bot, vocabulary: ICONS.book,
+    reading: ICONS.folder, writing: ICONS.award,
+  };
+  const skillIcon = (skill) => SKILL_ICONS[(skill || "").toLowerCase()] || ICONS.book;
 
-  const hero = el("div", { class: "study-hero reveal" },
-    el("div", {},
-      el("span", { class: "eyebrow" }, `BÀI HỌC HÔM NAY · ${dateText.toUpperCase()}`),
-      el("h2", {}, lesson.skill),
-      el("p", {}, lesson.description),
-      el("div", { class: "chip-row" },
-        el("span", { class: "pill pill-accent" }, lesson.phaseTitle),
-        el("span", { class: "pill" }, `${num(lesson.estimatedHours, 1)} giờ dự kiến`))),
-    el("div", { class: "study-goal" },
-      el("span", { class: "faint" }, "Mục tiêu lộ trình"),
-      el("b", {}, goalLabel(lesson.learningGoal))));
+  // ----- Cột trái: danh sách bài học trong lộ trình -----
+  const lessonList = el("div", { class: "lesson-list" },
+    el("div", { class: "lesson-list-head" }, "Bài học trong lộ trình"),
+    ...lesson.tasks.map((task) => {
+      const isToday = task.isToday;
+      const statusLabel = isToday ? "Đang học" : "Chưa học";
+      const item = el("div", { class: `lesson-item${isToday ? " is-active" : ""}` },
+        el("span", { class: "lesson-item-icon", html: skillIcon(task.skill) }),
+        el("div", { class: "lesson-item-body" },
+          el("b", { class: "lesson-item-skill" }, task.skill),
+          el("span", { class: "lesson-item-desc" }, task.description),
+          el("span", { class: `lesson-status lesson-status-${isToday ? "active" : "todo"}` }, statusLabel)),
+        isToday
+          ? el("span", { class: "pill pill-accent lesson-item-badge" }, "Đang học")
+          : el("button", {
+              class: "btn btn-primary btn-sm lesson-item-open", type: "button",
+              onclick: () => loadStudyLesson(view, task.id)
+            }, "Mở bài"));
+      return item;
+    }));
 
-  const tasks = el("div", { class: "card study-panel" },
-    el("div", { class: "section-title" }, "Nhiệm vụ cần hoàn thành"),
-    el("p", { class: "study-task-help" }, "Chọn Mở bài để chuyển tài liệu, quiz và Pomodoro sang môn bạn muốn học."),
-    ...lesson.tasks.map((task) => el("div", { class: `study-task${task.isToday ? " is-today" : ""}` },
-      el("span", { class: "study-task-mark", html: task.isToday ? ICONS.target : ICONS.clock }),
-      el("div", {},
-        el("b", {}, task.skill),
-        el("span", {}, task.description)),
-      task.isToday
-        ? el("span", { class: "pill pill-accent" }, "Đang học")
-        : el("button", {
-            class: "btn btn-primary btn-sm study-task-action",
-            type: "button",
-            onclick: () => loadStudyLesson(view, task.id)
-          }, `Mở bài ${task.skill}`))));
+  // ----- Cột phải: nội dung bài học đang chọn -----
+  const objective = lesson.description;
+  const materialBlocks = lesson.materials.map((m) =>
+    el("div", { class: "lesson-section" },
+      el("span", { class: "lesson-section-kind" }, m.type),
+      el("h4", { class: "lesson-section-title" }, m.title),
+      el("p", { class: "lesson-section-text" }, m.description)));
 
-  const materials = el("div", { class: "card study-panel" },
-    el("div", { class: "section-title" }, "Tài liệu học"),
-    ...lesson.materials.map((material) => el("article", { class: "study-material" },
-      el("span", { class: "study-material-icon", html: ICONS.book }),
-      el("div", {},
-        el("span", { class: "faint" }, material.type),
-        el("b", {}, material.title),
-        el("p", {}, material.description)))));
+  const practicePanel = buildPracticePanel(lesson);
 
   const quizProgress = el("span", { class: "pill", id: "studyQuizProgress" }, `0/${lesson.quizzes.length} câu`);
-  const quiz = el("div", { class: "card study-panel" },
-    el("div", { class: "row between", style: "margin-bottom:16px" },
-      el("div", { class: "section-title", style: "margin-bottom:0" }, "Câu hỏi bài học"),
+  const quiz = el("div", { class: "lesson-section lesson-quiz" },
+    el("div", { class: "row between", style: "margin-bottom:14px" },
+      el("h4", { class: "lesson-section-title", style: "margin:0" }, "Trắc nghiệm bài học"),
       quizProgress),
-    ...lesson.quizzes.map((question, questionIndex) => buildStudyQuestion(question, questionIndex, lesson.quizzes.length)));
-
-  const timerDisplay = el("div", { class: "pomodoro-time", id: "pomodoroTime" }, "25:00");
-  const timerStatus = el("span", { class: "faint", id: "pomodoroStatus" }, "Sẵn sàng tập trung");
-  const pomodoro = el("div", { class: "card study-panel pomodoro" },
-    el("div", { class: "section-title" }, "Pomodoro"),
-    el("div", { class: "pomodoro-ring" }, timerDisplay, timerStatus),
-    el("div", { class: "row", style: "justify-content:center;gap:10px" },
-      el("button", { class: "btn btn-primary", id: "pomodoroToggle", type: "button", onclick: toggleStudyTimer }, "Bắt đầu"),
-      el("button", { class: "btn btn-ghost", type: "button", onclick: resetStudyTimer }, "Đặt lại")));
+    el("div", { class: "quiz-progressbar" }, el("div", { class: "quiz-progressbar-fill", id: "studyQuizBar", style: "width:0%" })),
+    ...lesson.quizzes.map((question, i) => buildStudyQuestion(question, i, lesson.quizzes.length)));
 
   const evaluation = buildStudyEvaluation(lesson);
   const completeBar = el("div", { class: "study-complete card" },
     el("div", {},
       el("b", {}, "Bạn đã học xong?"),
-      el("span", { class: "muted" }, "Hoàn thành quiz và gửi đánh giá cuối buổi để cập nhật tiến độ.")),
-    el("button", { class: "btn btn-primary", type: "button", onclick: () => {
+      el("span", { class: "muted" }, "Trả lời hết câu trắc nghiệm và làm phần Thực hành ngay, sau đó gửi đánh giá cuối buổi để cập nhật tiến độ.")),
+    el("button", { class: "btn btn-primary", type: "button", onclick: (e) => {
+      // Không cho hoàn thành nếu chưa trả lời hết quiz.
+      const total = lesson.quizzes.length;
+      const answered = document.querySelectorAll('[data-quiz-result][data-answered="true"]').length;
+      if (answered < total) {
+        toast(`Hãy trả lời hết ${total} câu trắc nghiệm trước khi hoàn thành (đã trả lời ${answered}/${total}).`, "err");
+        quiz.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       evaluation.classList.remove("hidden");
       evaluation.scrollIntoView({ behavior: "smooth", block: "center" });
     } }, "Hoàn thành bài học"));
 
-  view.append(hero,
-    el("div", { class: "grid cols-2 study-grid", style: "margin-top:18px" }, tasks, materials),
-    el("div", { class: "grid cols-2 study-grid", style: "margin-top:18px" }, quiz, pomodoro),
+  const detail = el("main", { class: "lesson-detail-panel" },
+    el("div", { class: "lesson-detail-head" },
+      el("span", { class: "eyebrow" }, "BÀI HỌC HÔM NAY"),
+      el("h2", { class: "lesson-detail-title" }, lesson.skill),
+      el("div", { class: "chip-row" },
+        el("span", { class: "pill pill-accent" }, lesson.phaseTitle),
+        el("span", { class: "pill" }, goalLabel(lesson.learningGoal)),
+        el("span", { class: "pill" }, `${num(lesson.estimatedHours, 1)} giờ dự kiến`))),
+    el("div", { class: "lesson-section lesson-objective" },
+      el("span", { class: "lesson-section-kind" }, "Mục tiêu học hôm nay"),
+      el("p", { class: "lesson-section-text" }, objective)),
+    ...materialBlocks,
+    quiz,
+    practicePanel,
     completeBar,
     evaluation);
 
-  // Gắn đồng hồ nổi để luôn thấy thời gian khi cuộn trang làm bài.
-  mountFloatTimer();
+  const listPanel = el("aside", { class: "lesson-list-panel" }, lessonList);
+  const workspace = el("div", { class: "study-layout reveal" }, listPanel, detail);
+  view.append(workspace);
+
+  // Gắn đồng hồ Pomodoro nổi để luôn thấy thời gian khi cuộn trang làm bài.
+  stopStudyTimer();
+  studyClock = createFloatingPomodoroClock({ durationSeconds: 25 * 60, title: "Pomodoro" });
+  studyClock.mount();
+}
+
+// ====================================================================
+// Phần "Thực hành ngay" — tương tác thật, lưu tạm vào localStorage
+// ====================================================================
+const PRACTICE_CONFIGS = {
+  grammar: {
+    type: "timeline-writing",
+    title: "Viết 5 câu theo dòng thời gian",
+    prompt: "Tạo một cặp sự kiện trong quá khứ và dùng Past Perfect cho sự kiện xảy ra trước. Điền đủ 5 ô bên dưới.",
+    fields: [
+      { id: "before", label: "1. Sự kiện xảy ra trước", placeholder: "Ví dụ: She had finished her homework" },
+      { id: "after", label: "2. Sự kiện xảy ra sau", placeholder: "Ví dụ: her friends arrived" },
+      { id: "sentence", label: "3. Câu dùng Past Perfect", placeholder: "Ví dụ: She had finished her homework before her friends arrived." },
+      { id: "time", label: "4. Mốc thời gian", placeholder: "Ví dụ: by 8 p.m. yesterday" },
+      { id: "note", label: "5. Ghi chú cá nhân", placeholder: "Điều bạn muốn nhớ về Past Perfect" },
+    ],
+    feedback: "Tốt. Hãy kiểm tra: sự kiện xảy ra trước dùng 'had + V3', sự kiện sau dùng quá khứ đơn, và có mốc thời gian rõ ràng.",
+  },
+  writing: {
+    type: "free-writing",
+    title: "Viết mở bài theo cấu trúc 2 câu",
+    prompt: "Áp dụng cấu trúc đã học: câu 1 paraphrase đề bài, câu 2 nêu lập trường và hai luận điểm.",
+    fields: [
+      { id: "paraphrase", label: "1. Câu paraphrase đề bài", placeholder: "Viết lại chủ đề bằng từ đồng nghĩa" },
+      { id: "thesis", label: "2. Câu thesis (lập trường)", placeholder: "Nêu quan điểm và hai luận điểm chính" },
+      { id: "point1", label: "3. Luận điểm 1", placeholder: "Ý chính thứ nhất" },
+      { id: "point2", label: "4. Luận điểm 2", placeholder: "Ý chính thứ hai" },
+      { id: "note", label: "5. Ghi chú cá nhân", placeholder: "Điều cần lưu ý khi viết mở bài" },
+    ],
+    feedback: "Tốt. Kiểm tra: câu paraphrase không chép nguyên đề, thesis trả lời trực tiếp câu hỏi và nêu rõ hai luận điểm.",
+  },
+  vocabulary: {
+    type: "free-writing",
+    title: "Tạo 5 thẻ từ có ngữ cảnh",
+    prompt: "Với mỗi từ học thuật, viết một câu ví dụ liên quan đến chủ đề bạn quan tâm.",
+    fields: [
+      { id: "w1", label: "1. Từ + câu ví dụ", placeholder: "significant — There was a significant increase in users." },
+      { id: "w2", label: "2. Từ + câu ví dụ", placeholder: "demonstrate — The data demonstrate a clear trend." },
+      { id: "w3", label: "3. Từ + câu ví dụ", placeholder: "factor — Cost is a key factor in the decision." },
+      { id: "w4", label: "4. Từ + câu ví dụ", placeholder: "approach — We need a practical approach." },
+      { id: "note", label: "5. Ghi chú cá nhân", placeholder: "Collocation bạn muốn nhớ" },
+    ],
+    feedback: "Tốt. Hãy đọc to mỗi câu và kiểm tra collocation đã tự nhiên chưa.",
+  },
+};
+
+function defaultPracticeConfig(skill) {
+  return {
+    type: "free-writing",
+    title: `Thực hành: ${skill}`,
+    prompt: `Tự tóm tắt và áp dụng kiến thức ${skill} vừa học qua 5 ghi chú ngắn bên dưới.`,
+    fields: [
+      { id: "k1", label: "1. Ý chính thứ nhất", placeholder: "Khái niệm quan trọng nhất" },
+      { id: "k2", label: "2. Ý chính thứ hai", placeholder: "Một điểm cần nhớ" },
+      { id: "ex", label: "3. Ví dụ áp dụng", placeholder: "Một ví dụ cụ thể bạn tự nghĩ ra" },
+      { id: "hard", label: "4. Phần còn khó", placeholder: "Điều bạn chưa chắc chắn" },
+      { id: "note", label: "5. Ghi chú cá nhân", placeholder: "Cách bạn sẽ luyện tập thêm" },
+    ],
+    feedback: "Tốt. Tự diễn đạt lại bằng lời của bạn là cách ghi nhớ hiệu quả nhất.",
+  };
+}
+
+function practiceStorageKey(lesson) {
+  return `tts_practice_${lesson.taskId}`;
+}
+
+function buildPracticePanel(lesson) {
+  const skill = (lesson.skill || "").toLowerCase();
+  const config = PRACTICE_CONFIGS[skill] || defaultPracticeConfig(lesson.skill);
+  const storeKey = practiceStorageKey(lesson);
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch { saved = {}; }
+
+  const feedback = el("div", { class: "practice-feedback hidden" });
+
+  const persist = () => {
+    const data = {};
+    config.fields.forEach((f) => {
+      const input = panel.querySelector(`[data-field="${f.id}"]`);
+      if (input) data[f.id] = input.value;
+    });
+    try { localStorage.setItem(storeKey, JSON.stringify(data)); } catch { /* bỏ qua */ }
+  };
+
+  const fieldNodes = config.fields.map((f) => {
+    const input = el("textarea", {
+      class: "input practice-input", rows: "2", "data-field": f.id,
+      placeholder: f.placeholder || "", maxlength: "300",
+      oninput: persist,
+    });
+    if (saved[f.id]) input.value = saved[f.id];
+    return el("div", { class: "field practice-field" },
+      el("label", {}, f.label),
+      input,
+      el("span", { class: "practice-error hidden" }));
+  });
+
+  const form = el("div", { class: "practice-form" }, ...fieldNodes);
+
+  const checkBtn = el("button", { class: "btn btn-primary", type: "button",
+    onclick: () => checkPractice(panel, config, feedback) }, "Kiểm tra bài làm");
+  const resetBtn = el("button", { class: "btn btn-ghost", type: "button",
+    onclick: () => resetPractice(panel, config, feedback, storeKey) }, "Làm lại");
+  const actions = el("div", { class: "practice-actions" }, checkBtn, resetBtn);
+
+  const panel = el("div", { class: "lesson-section practice-panel" },
+    el("span", { class: "lesson-section-kind practice-kind" }, "Thực hành ngay"),
+    el("h4", { class: "lesson-section-title" }, config.title),
+    el("p", { class: "lesson-section-text" }, config.prompt),
+    form,
+    actions,
+    feedback);
+  return panel;
+}
+
+function checkPractice(panel, config, feedback) {
+  let filled = 0;
+  let firstMissing = null;
+  config.fields.forEach((f) => {
+    const field = panel.querySelector(`[data-field="${f.id}"]`);
+    const error = field.closest(".practice-field").querySelector(".practice-error");
+    const value = (field.value || "").trim();
+    if (!value) {
+      error.textContent = "Bạn chưa điền ô này.";
+      error.classList.remove("hidden");
+      field.classList.add("is-invalid");
+      if (!firstMissing) firstMissing = field;
+    } else {
+      error.classList.add("hidden");
+      field.classList.remove("is-invalid");
+      filled += 1;
+    }
+  });
+
+  feedback.classList.remove("hidden", "is-ok", "is-warn");
+  if (filled < config.fields.length) {
+    feedback.classList.add("is-warn");
+    feedback.innerHTML = `<b>Đã hoàn thành ${filled}/${config.fields.length} ô.</b> Hãy điền nốt các ô còn thiếu để hoàn tất bài thực hành.`;
+    if (firstMissing) firstMissing.focus();
+  } else {
+    feedback.classList.add("is-ok");
+    feedback.innerHTML = `<b>Hoàn thành ${filled}/${config.fields.length} ô.</b> ${config.feedback}`;
+    panel.dataset.completed = "true";
+  }
+}
+
+function resetPractice(panel, config, feedback, storeKey) {
+  config.fields.forEach((f) => {
+    const field = panel.querySelector(`[data-field="${f.id}"]`);
+    if (field) field.value = "";
+    const error = field?.closest(".practice-field")?.querySelector(".practice-error");
+    if (error) error.classList.add("hidden");
+    field?.classList.remove("is-invalid");
+  });
+  feedback.classList.add("hidden");
+  panel.dataset.completed = "false";
+  try { localStorage.removeItem(storeKey); } catch { /* bỏ qua */ }
 }
 
 function buildStudyQuestion(quiz, questionIndex, total) {
@@ -815,97 +979,9 @@ function answerStudyQuiz(button, selected, quiz) {
   const allResults = [...document.querySelectorAll("[data-quiz-result]")];
   const answered = allResults.filter((item) => item.dataset.answered === "true").length;
   const progress = $("#studyQuizProgress");
-  if (progress) progress.textContent = `${answered}/${allResults.length} câu`;
-}
-
-function updateStudyTimerDisplay() {
-  const display = $("#pomodoroTime");
-  const minutes = Math.floor(StudyTimer.secondsLeft / 60);
-  const seconds = StudyTimer.secondsLeft % 60;
-  const text = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  if (display) display.textContent = text;
-  const floatTime = $("#floatTimerTime");
-  if (floatTime) floatTime.textContent = text;
-}
-
-// ---- Đồng hồ nổi: bám màn hình, luôn thấy thời gian khi cuộn trang làm bài ----
-function mountFloatTimer() {
-  removeFloatTimer();
-  const node = el("div", { class: "float-timer", id: "floatTimer", role: "status", "aria-live": "polite" },
-    el("button", {
-      class: "btn btn-primary float-timer-btn", id: "floatTimerToggle", type: "button",
-      "aria-label": "Bắt đầu hoặc tạm dừng", html: ICONS.play,
-      onclick: toggleStudyTimer,
-    }),
-    el("div", { class: "float-timer-info" },
-      el("span", { class: "float-timer-label", id: "floatTimerLabel" }, "Pomodoro"),
-      el("span", { class: "float-timer-time", id: "floatTimerTime" }, "25:00")));
-  document.body.append(node);
-  // Kích hoạt hiệu ứng hiện sau khi gắn vào DOM.
-  requestAnimationFrame(() => node.classList.add("is-visible"));
-  updateStudyTimerDisplay();
-  syncFloatTimerState();
-}
-
-function removeFloatTimer() {
-  const existing = $("#floatTimer");
-  if (existing) existing.remove();
-}
-
-// Đồng bộ trạng thái (đang chạy / tạm dừng / xong) lên cả Pomodoro và đồng hồ nổi.
-function syncFloatTimerState() {
-  const running = !!StudyTimer.interval;
-  const done = StudyTimer.secondsLeft === 0;
-  const floatNode = $("#floatTimer");
-  const floatToggle = $("#floatTimerToggle");
-  const floatLabel = $("#floatTimerLabel");
-  if (floatNode) {
-    floatNode.classList.toggle("is-running", running);
-    floatNode.classList.toggle("is-done", done && !running);
-  }
-  if (floatToggle) floatToggle.innerHTML = running ? ICONS.pause : ICONS.play;
-  if (floatLabel) {
-    floatLabel.textContent = done ? "Hết giờ" : running ? "Đang tập trung" : "Tạm dừng";
-  }
-}
-
-function toggleStudyTimer() {
-  const button = $("#pomodoroToggle");
-  const status = $("#pomodoroStatus");
-  if (StudyTimer.interval) {
-    stopStudyTimer();
-    if (button) button.textContent = "Tiếp tục";
-    if (status) status.textContent = "Đang tạm dừng";
-    syncFloatTimerState();
-    return;
-  }
-  if (button) button.textContent = "Tạm dừng";
-  if (status) status.textContent = "Đang tập trung";
-  StudyTimer.interval = setInterval(() => {
-    StudyTimer.secondsLeft = Math.max(0, StudyTimer.secondsLeft - 1);
-    StudyTimer.elapsedSeconds += 1;
-    updateStudyTimerDisplay();
-    if (StudyTimer.secondsLeft === 0) {
-      stopStudyTimer();
-      if (button) button.textContent = "Bắt đầu lại";
-      if (status) status.textContent = "Hoàn thành một Pomodoro";
-      syncFloatTimerState();
-      toast("Hết 25 phút. Hãy nghỉ ngắn trước khi tiếp tục.");
-    }
-  }, 1000);
-  syncFloatTimerState();
-}
-
-function resetStudyTimer() {
-  stopStudyTimer();
-  StudyTimer.secondsLeft = StudyTimer.initialSeconds;
-  StudyTimer.elapsedSeconds = 0;
-  updateStudyTimerDisplay();
-  const button = $("#pomodoroToggle");
-  const status = $("#pomodoroStatus");
-  if (button) button.textContent = "Bắt đầu";
-  if (status) status.textContent = "Sẵn sàng tập trung";
-  syncFloatTimerState();
+  if (progress) progress.textContent = `Đã trả lời ${answered}/${allResults.length} câu`;
+  const bar = $("#studyQuizBar");
+  if (bar) bar.style.width = `${Math.round((answered / allResults.length) * 100)}%`;
 }
 
 function buildStudyEvaluation(lesson) {
@@ -940,6 +1016,7 @@ async function completeStudyLesson(lesson, button) {
     return;
   }
 
+  const elapsedSeconds = studyClock ? studyClock.getElapsedSeconds() : 0;
   stopStudyTimer();
   button.disabled = true;
   button.textContent = "Đang cập nhật tiến độ...";
@@ -947,7 +1024,7 @@ async function completeStudyLesson(lesson, button) {
     const result = await api(`/api/users/${State.userId}/study-lessons/${lesson.taskId}/complete`, {
       method: "POST",
       body: {
-        durationMinutes: Math.max(1, Math.ceil(StudyTimer.elapsedSeconds / 60)),
+        durationMinutes: Math.max(1, Math.ceil(elapsedSeconds / 60)),
         rating,
         reflection: $("#studyReflection").value.trim(),
         quizCorrect: quizResults.every((item) => item.dataset.correct === "true"),
@@ -1012,8 +1089,56 @@ ROUTES.dashboard = async (view) => {
 // ====================================================================
 ROUTES.ai = async (view) => {
   view.innerHTML = "";
-  view.append(viewHeadDesc("Trung tâm AI dùng chung: trạng thái provider, insight tiến độ và tutor cá nhân hóa theo hồ sơ, assessment, DNA và lộ trình hiện tại."));
+  view.append(viewHeadDesc("Trung tâm AI cá nhân hóa: hỏi đáp học tập, luyện từ vựng IELTS, chữa lỗi và đề xuất kế hoạch học tiếp."));
 
+  // Tab bar: Hỏi AI | Quiz từ vựng IELTS | Chữa bài | Kế hoạch học tiếp
+  const TABS = [
+    { id: "vocab", label: "Tạo bài luyện" },
+    { id: "review", label: "Chữa bài & giải thích lỗi" },
+    { id: "assistant", label: "Hỏi AI" },
+    { id: "plan", label: "Kế hoạch học tiếp" },
+  ];
+  const validTabs = TABS.map((t) => t.id);
+
+  // Fallback tab cũ ("creator" của "Tạo bài luyện" đã bị bỏ) → Tạo bài luyện.
+  let savedTab = null;
+  try { savedTab = localStorage.getItem("tts_coach_tab"); } catch { savedTab = null; }
+  if (!validTabs.includes(savedTab)) savedTab = "vocab";
+
+  const tabBar = el("div", { class: "coach-tabs" },
+    ...TABS.map((t) => el("button", {
+      class: `coach-tab${t.id === savedTab ? " active" : ""}`, type: "button", "data-tab": t.id
+    }, t.label)));
+  const panel = el("div", { class: "coach-tabpanel", style: "margin-top:18px" });
+  view.append(tabBar, panel);
+
+  const showTab = (tab) => {
+    if (!validTabs.includes(tab)) tab = "vocab";
+    try { localStorage.setItem("tts_coach_tab", tab); } catch { /* bỏ qua */ }
+    tabBar.querySelectorAll(".coach-tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+    panel.innerHTML = "";
+    if (tab === "vocab") {
+      if (window.VocabQuiz && window.VocabQuiz.mount) window.VocabQuiz.mount(panel);
+      else panel.append(el("div", { class: "muted" }, "Không tải được Quiz từ vựng IELTS."));
+    } else if (tab === "review") {
+      if (global_CoachQuizReady()) window.CoachQuiz.mountReview(panel);
+      else panel.append(el("div", { class: "muted" }, "Không tải được công cụ chữa bài."));
+    } else if (tab === "plan") {
+      if (global_CoachQuizReady()) window.CoachQuiz.mountPlan(panel);
+      else panel.append(el("div", { class: "muted" }, "Không tải được kế hoạch học."));
+    } else {
+      renderAiAssistant(panel);
+    }
+  };
+  tabBar.querySelectorAll(".coach-tab").forEach((b) =>
+    b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+  showTab(savedTab);
+};
+
+function global_CoachQuizReady() { return !!(window.CoachQuiz && window.CoachQuiz.mountReview); }
+
+async function renderAiAssistant(view) {
   const statusSlot = el("div", { class: "grid cols-3 reveal" });
   view.append(statusSlot);
   try {
@@ -1050,15 +1175,19 @@ ROUTES.ai = async (view) => {
         el("span", { class: "help" }, "Câu trả lời được lưu vào conversation để phục vụ feedback loop."),
         el("button", { class: "btn btn-primary", onclick: (e) => askTutor(question, tutorSlot, e.target) }, "Gửi câu hỏi")),
       tutorSlot));
-};
+}
 
 function aiStatusTile(label, status, detail) {
   const live = /configured|ready|enabled|live/i.test(status);
-  const warn = /fallback|disabled|unreachable|unknown/i.test(status);
+  const warn = /fallback|disabled|unreachable|unknown|timeout|unready/i.test(status);
+  // Nhãn pill thân thiện: ready → "ML live"/"AI live"; fallback/timeout → "fallback active".
+  const pillText = live
+    ? (/^ML$/i.test(label) ? "ML live" : "AI live")
+    : warn ? "fallback active" : status;
   return el("div", { class: "metric ai-status" },
     el("div", { class: "k" }, label),
-    el("div", { class: "v" }, status),
-    el("span", { class: `pill ${live ? "pill-accent" : warn ? "pill-warn" : ""}` }, live ? "AI live" : status),
+    el("div", { class: "v" }, live ? "ready" : warn ? "fallback" : status),
+    el("span", { class: `pill ${live ? "pill-accent" : warn ? "pill-warn" : ""}` }, pillText),
     detail ? el("div", { class: "faint", style: "font-size:13px;margin-top:10px" }, detail) : null);
 }
 

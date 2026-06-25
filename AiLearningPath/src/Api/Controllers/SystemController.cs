@@ -36,7 +36,7 @@ public sealed class SystemController : ControllerBase
         var mlConfigured = MlServiceOptions.IsConfigured(_mlOptions);
         var mlReady = mlConfigured
             ? await CheckMlReadyAsync(cancellationToken)
-            : new ExternalDependencyStatus(false, "fallback", "ML service endpoint is not configured.");
+            : new ExternalDependencyStatus(false, "fallback", "ML service chưa được cấu hình, hệ thống đang dùng dự đoán dự phòng.");
 
         var response = new AiStatusResponse(
             Gemini: new ExternalDependencyStatus(
@@ -54,10 +54,12 @@ public sealed class SystemController : ControllerBase
 
     private async Task<ExternalDependencyStatus> CheckMlReadyAsync(CancellationToken cancellationToken)
     {
+        // Dùng timeout từ cấu hình (MlService:TimeoutSeconds); mặc định 10 giây nếu không hợp lệ.
+        var timeoutSeconds = _mlOptions.TimeoutSeconds > 0 ? _mlOptions.TimeoutSeconds : 10;
         try
         {
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(2));
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
             var endpoint = _mlOptions.Endpoint!.TrimEnd('/');
             using var request = new HttpRequestMessage(HttpMethod.Get, $"{endpoint}/ready");
@@ -69,16 +71,16 @@ public sealed class SystemController : ControllerBase
             var client = _httpClientFactory.CreateClient();
             using var response = await client.SendAsync(request, timeoutCts.Token);
             return response.IsSuccessStatusCode
-                ? new ExternalDependencyStatus(true, "ready", "ML service readiness check passed.")
-                : new ExternalDependencyStatus(true, "unready", $"ML service returned HTTP {(int)response.StatusCode}.");
+                ? new ExternalDependencyStatus(true, "ready", "ML service đã sẵn sàng (readiness check passed).")
+                : new ExternalDependencyStatus(true, "fallback", $"ML service trả HTTP {(int)response.StatusCode}. Hệ thống đang dùng dự đoán dự phòng.");
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new ExternalDependencyStatus(true, "timeout", "ML service readiness check timed out.");
+            return new ExternalDependencyStatus(true, "fallback", $"ML service chưa sẵn sàng (quá {timeoutSeconds}s), hệ thống đang dùng dự đoán dự phòng.");
         }
         catch (Exception ex)
         {
-            return new ExternalDependencyStatus(true, "unreachable", ex.Message);
+            return new ExternalDependencyStatus(true, "fallback", $"ML service chưa sẵn sàng, hệ thống đang dùng dự đoán dự phòng. ({ex.GetType().Name})");
         }
     }
 }
