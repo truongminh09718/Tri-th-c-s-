@@ -79,4 +79,4 @@ def home():
 
 # KHOI CHAY SERVER (CHAY MAY TINH CA NHAN CONG 5000)
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

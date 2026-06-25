@@ -4,25 +4,77 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Learning Path - Dự đoán GPA & TOEIC</title>
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem("tts_theme");
+                if (t !== "light" && t !== "dark") {
+                    t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                }
+                document.documentElement.setAttribute("data-theme", t);
+            } catch (e) {
+                document.documentElement.setAttribute("data-theme", "light");
+            }
+        })();
+    </script>
     <style>
+        :root {
+            --bg-body: #f4f7fb;
+            --bg-container: #ffffff;
+            --text-main: #000000;
+            --border-input: #ccd6e0;
+            --bg-result: #eef3fb;
+            --border-result: #d6e0f1;
+            --shadow-container: rgba(0,0,0,0.08);
+            --bg-input: #ffffff;
+            --text-link: #1f4d7a;
+            --text-input: #000000;
+
+            /* Error colors */
+            --bg-error: #ffe7e7;
+            --border-error: #f3c0c0;
+            --text-error: #a72121;
+        }
+
+        html[data-theme="dark"] {
+            --bg-body: #121316;
+            --bg-container: #1a1c20;
+            --text-main: #ffffff;
+            --border-input: #2d323b;
+            --bg-result: #0f3460;
+            --border-result: #1e3a5f;
+            --shadow-container: rgba(0,0,0,0.4);
+            --bg-input: #1c1d22;
+            --text-link: #64b5f6;
+            --text-input: #ffffff;
+
+            /* Error colors */
+            --bg-error: #3d1f1f;
+            --border-error: #5d3030;
+            --text-error: #ff6b6b;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            background: #f4f7fb;
-            color: #333;
+            background: var(--bg-body);
+            color: var(--text-main);
             margin: 0;
             padding: 0;
+            transition: background 0.3s ease, color 0.3s ease;
         }
         .container {
             max-width: 700px;
             margin: 40px auto;
-            background: #ffffff;
+            background: var(--bg-container);
             border-radius: 12px;
-            box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+            box-shadow: 0 16px 40px var(--shadow-container);
             padding: 30px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         h1 {
             margin-top: 0;
-            color: #1f4d7a;
+            color: var(--text-main);
+            transition: color 0.3s ease;
         }
         label {
             display: block;
@@ -32,35 +84,53 @@
         input[type="number"] {
             width: 100%;
             padding: 12px 14px;
-            border: 1px solid #ccd6e0;
+            border: 1px solid var(--border-input);
             border-radius: 8px;
             margin-bottom: 20px;
             box-sizing: border-box;
+            background: var(--bg-input);
+            color: var(--text-input);
+            transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
         }
-        button {
+        
+        /* Action buttons with static color schema (WCAG AA compliant dark blue) */
+        #btn-predict, #btn-simulate {
             background: #1f4d7a;
-            color: #fff;
+            color: #ffffff;
             border: none;
             padding: 14px 22px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 15px;
             margin-right: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
-        button:hover {
+        #btn-predict:hover, #btn-simulate:hover {
             background: #163d5c;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px var(--shadow-container);
         }
+        #btn-predict:active, #btn-simulate:active {
+            transform: translateY(0);
+        }
+
         .result {
             margin-top: 24px;
             padding: 20px;
             border-radius: 10px;
-            background: #eef3fb;
-            border: 1px solid #d6e0f1;
+            background: var(--bg-result);
+            border: 1px solid var(--border-result);
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        .result strong {
+            color: var(--text-main);
+            font-weight: 700;
         }
         .error {
-            background: #ffe7e7;
-            border-color: #f3c0c0;
-            color: #a72121;
+            background: var(--bg-error);
+            border-color: var(--border-error);
+            color: var(--text-error);
         }
         .top-nav {
             display: flex;
@@ -69,9 +139,48 @@
             margin-bottom: 24px;
         }
         .top-nav a {
-            color: #1f4d7a;
+            color: var(--text-link);
             text-decoration: none;
             font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        /* theme toggle button styled like landing page index.html */
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border: 1.5px solid var(--text-main);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+            margin: 0;
+            padding: 0;
+        }
+        .theme-toggle:hover {
+            background: var(--text-main);
+            color: var(--bg-container);
+        }
+        .theme-toggle:active {
+            transform: translateY(1px);
+        }
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+        .theme-toggle .ic-moon {
+            display: none;
+        }
+        html[data-theme="dark"] .theme-toggle .ic-sun {
+            display: none;
+        }
+        html[data-theme="dark"] .theme-toggle .ic-moon {
+            display: block;
         }
     </style>
 </head>
@@ -81,7 +190,11 @@
             <div>
                 <a href="/">← Trở về Tri Thức Số</a>
             </div>
-            <div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button class="theme-toggle" id="themeToggleBtn" type="button" aria-label="Chuyển giao diện">
+                    <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M4.93 19.07l1.41-1.41"/><path d="M17.66 6.34l1.41-1.41"/></svg>
+                    <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9a9 9 0 1 1-9-9z"/></svg>
+                </button>
                 <a href="/app.html">Vào ứng dụng</a>
             </div>
         </div>
@@ -165,6 +278,33 @@
                 <p>Xác suất thành công: <strong>${data.probability_success_percent}%</strong></p>
             `);
         });
+
+        // ========== Theme Management ==========
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const htmlElement = document.documentElement;
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('tts_theme') || 'light';
+            applyTheme(savedTheme);
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('tts_theme', 'dark');
+            } else {
+                htmlElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('tts_theme', 'light');
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme') || 'light';
+            const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(nextTheme);
+        });
+
+        initTheme();
     </script>
 </body>
 </html>
